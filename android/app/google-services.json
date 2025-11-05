@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "839871506287",
+    "project_id": "clon-z",
+    "storage_bucket": "clon-z.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:839871506287:android:1a2f6e340c90157bceea9a",
+        "android_client_info": {
+          "package_name": "com.projecto"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAf6Gkmetdgfte0KJsXMie5y-qlnCn2AiI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -2,6 +2,9 @@ import React from "react";
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { PaperProvider } from "react-native-paper";
+import Login from './src/Screens/Login';
+import Register from './src/Screens/Register';
+import ViewUser from './src/Screens/ViewUser';
 import ZHeader from './src/Components/ZHeader';
 import PublishPost from './src/Screens/PublishPost';
 import Feed from './src/Screens/Feed';
@@ -9,6 +12,7 @@ import ViewPost from './src/Screens/ViewPost';
 import ViewProfileScreen from './src/Screens/ViewProfileScreen';
 import FollowersListScreen from './src/Screens/FollowersListScreen';
 import FollowingListScreen from './src/Screens/FollowingListScreen';
+
 
 const Stack = createNativeStackNavigator();
 
@@ -35,8 +39,18 @@ export default function App() {
   return (
     <PaperProvider>
       <NavigationContainer>
-        <ZHeader username = {username}/> 
-        <Stack.Navigator initialRouteName="Feed">
+        <ZHeader username = {username}/>
+        <Stack.Navigator initialRouteName="Login">          
+          <Stack.Screen
+            name="Login"
+            component={Login}
+            options={{ title: 'Login'}}
+          />
+          <Stack.Screen
+            name="Register"
+            component={Register}
+            options={{ title: 'Register'}}
+          /> 
           <Stack.Screen
             name="Feed"
             component={Feed}
@@ -67,10 +81,10 @@ export default function App() {
                name="FollowingList"
                component={FollowingListScreen}
             />
+
         </Stack.Navigator>
       </NavigationContainer>
     </PaperProvider>
   );
-} 
-
+}
 

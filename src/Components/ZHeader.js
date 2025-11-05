@@ -1,51 +1,119 @@
 import React from 'react';
-import { View, Text, Image, TouchableOpacity } from 'react-native';
+import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { auth } from '../config/firebase'; 
+import { Appbar, Avatar } from 'react-native-paper'; 
 
-const ZHeader = ({ username, onLogout }) => {
+const ZHeader = ({ user, navigation }) => {
+
+  const handleLogout = async () => {
+    try {
+      await auth().signOut(); 
+      navigation.replace('Login'); 
+    } catch (error) {
+      console.error("Error when Logging out: ", error);
+    }
+  };
+
+  const handleSearch = () => {
+    navigation.navigate('Search', { currentUser: user }); 
+  };
+
+  const handleGoToProfile = () => {
+    if (user) {
+      navigation.navigate('ViewProfile', { 
+          profileId: user.id, 
+          currentUserId: user.id 
+        });
+    }
+  };
+
+  const getInitials = () => {
+    try {
+      if (!user || !user.nameFull) return '..';
+      return user.nameFull
+        ? user.nameFull.split(' ').map(word => word[0]).join('').slice(0, 2).toUpperCase()
+        : 'No Name';
+    } catch (error) {
+      return 'No Name';
+    }
+  };
+
   return (
-    <SafeAreaView
-      style={{
-        backgroundColor: '#8A2BE2'
-      }}
-    >
-      <View
-        style={{
-          flexDirection: 'row',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          paddingHorizontal: 20
-        }}
-      >
+    <SafeAreaView style={styles.safeArea}>
+      <View style={styles.container}>
+        <TouchableOpacity onPress={handleGoToProfile} style={styles.avatarWrapper}>
+          {user && user.avatarUrl ? (
+            <Avatar.Image
+              size={40}
+              source={{ uri: user.avatarUrl }}
+            />
+          ) : (
+            <Avatar.Text
+              size={40}
+              label={getInitials()}
+              style={styles.avatarFallback}
+            />
+          )}
+        </TouchableOpacity>
 
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Image
-            source={require('../Assets/zentroLogo.png')}
-            style={{
-              width: 60,
-              height: 60,
-              borderRadius: 30, //Makes it look like a circle
-              marginRight: 8,
-              borderWidth: 1,
-              borderColor: 'white'}}
-              resizeMode="cover"
-          />
-          
-        </View>
-
-        <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 16 }}>
-          @{username}
+        <Text style={styles.username}>
+          @{user ? user.nameUser : 'Guest'}
         </Text>
 
-        <TouchableOpacity onPress={onLogout}>
-          <Text style={{ color: 'white', fontWeight: '600' }}>Logout</Text>
+        <Appbar.Action
+          icon="magnify" 
+          color="white"
+          onPress={handleSearch}
+        />
+        <TouchableOpacity onPress={handleLogout}>
+          <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
-  );//Closes return (Remember to make the Logout work later)
+  );
+};
 
-}; //Closes ZHeader component
+const styles = StyleSheet.create({
+  safeArea: {
+    backgroundColor: '#8A2BE2'
+  },
+  container: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 10,
+    height: 60,
+  },
+  avatarWrapper: {
+    width: 42, 
+    height: 42,
+    borderRadius: 21,
+    borderWidth: 1,
+    borderColor: 'white',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 8,
+  },
+  avatarFallback: {
+    backgroundColor: '#BCA1E8', 
+  },
+  username: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
+    flex: 1, 
+    textAlign: 'center',
+    marginHorizontal: 10,
+  },
+  logoutText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 16,
+    paddingLeft: 5,
+  }
+});//Closes styles
 
 export default ZHeader;
 
-//This isn't the final header design, will be styled later
+//Styles might change later

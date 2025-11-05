@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, Image, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 
 const ZHeader = ({ username, onLogout }) => {
   return (
@@ -19,18 +20,19 @@ const ZHeader = ({ username, onLogout }) => {
       >
 
         <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <Image
-            source={require('../Assets/zentroLogo.png')}
-            style={{
-              width: 60,
-              height: 60,
-              borderRadius: 30, //Makes it look like a circle
-              marginRight: 8,
-              borderWidth: 1,
-              borderColor: 'white'}}
-              resizeMode="cover"
-          />
-          
+          <TouchableOpacity onPress={() => navigation.navigate('ViewProfile')}>
+            <Image
+              source={require('../Assets/zentroLogo.png')}
+              style={{
+                width: 60,
+                height: 60,
+                borderRadius: 30,
+                marginRight: 8,
+                borderWidth: 1,
+                borderColor: 'white'}}
+                resizeMode="cover"
+            />
+          </TouchableOpacity>
         </View>
 
         <Text style={{ color: 'white', fontWeight: 'bold', fontSize: 16 }}>
@@ -42,10 +44,8 @@ const ZHeader = ({ username, onLogout }) => {
         </TouchableOpacity>
       </View>
     </SafeAreaView>
-  );//Closes return (Remember to make the Logout work later)
+  );
 
-}; //Closes ZHeader component
+};
 
 export default ZHeader;
-
-//This isn't the final header design, will be styled later

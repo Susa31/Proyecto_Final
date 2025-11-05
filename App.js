@@ -7,10 +7,6 @@ import ViewProfileScreen from './src/Screens/ViewProfileScreen';
 import FollowersListScreen from './src/Screens/FollowersListScreen';
 import FollowingListScreen from './src/Screens/FollowingListScreen';
 
-import ZHeader from './src/Components/ZHeader';//from marsiglia code
-import PublishPost from './src/Screens/PublishPost';//from marsiglia code
-import Feed from './src/Screens/Feed';//from marsiglia code
-
 const Stack = createNativeStackNavigator();
 
 export default function App() {
@@ -23,27 +19,15 @@ const easyExampleProfile = {
     description: 'Singer and composer of “Zombie on Your Lawn” from PvZ and George’s girlfriend',
     avatarUrl: '',
     followers: [{
-        id: 3,fullName: 'marsiglia', userName: 'follower1', description: ''
+        id: 3,fullName: 'Marsiglia Alejandro', userName: 'follower1', description: ''
     }],
-    following: [{id: 2,fullName: 'marsiglia', userName: 'follower1', description: 'I love your music!'}],
+    following: [{id: 2,fullName: 'Alejandro Marsiglia', userName: 'following1', description: 'I love your music!'}],
 };
 
 return (
     <PaperProvider>
         <NavigationContainer>
-        <ZHeader username = {"username?"}/> //from marsiglia code
-            <Stack.Navigator initialRouteName="Feed">
-                <Stack.Screen//from marsiglia code
-                    name="Feed"
-                    component={Feed}
-                    options={{ headerShown: false }}
-                />
-                <Stack.Screen//from marsiglia code
-                    name="PublishPost"
-                    component={PublishPost}
-                    options={{ headerShown: false }}
-                    initialParams={{username: "username?"}}
-                />
+            <Stack.Navigator initialRouteName="ViewProfile">
                 <Stack.Screen
                     name="ViewProfile"
                     component={ViewProfileScreen}

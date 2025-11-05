@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, ScrollView, Button, TouchableOpacity } from 'react-native';
 import { Card, Avatar, Divider, Text } from 'react-native-paper';
-import styles from '../styles/screenStyles';
+import styles from '../Styles/screenStyles';
 
 const ViewProfileScreen = ({ route, navigation }) => {
   const { profile1 } = route.params;
@@ -9,41 +9,58 @@ const ViewProfileScreen = ({ route, navigation }) => {
   const [isFollowing, setIsFollowing] = useState(false);
 
   useEffect(() => {
-    console.log('Viewing profile of:', profile.fullName);
+    try {
+      console.log('Viewing profile of:', profile.fullName);
+    } catch (error) {
+      console.error('Error in useEffect:', error);
+    }
   }, [profile]);
 
   const handleGoBack = () => {
-    navigation.goBack();
+    try {
+      navigation.goBack();
+    } catch (error) {
+      console.error('Error going back:', error);
+    }
   };
 
   const handleFollow = () => {
-    if (isFollowing) {
-      setIsFollowing(false);
-      setProfile(prev => ({
-        ...prev,
-        followers: prev.followers.filter(u => u.id !== 369),
-      }));
-    } else {
-      setIsFollowing(true);
-      setProfile(prev => ({
-        ...prev,
-        followers: [
-          ...(prev.followers || []),
-          { id: 369, userName: 'me', description: 'who I am?' },
-        ],
-      }));
+    try {
+      if (isFollowing) {
+        setIsFollowing(false);
+        setProfile(prev => ({
+          ...prev,
+          followers: prev.followers.filter(u => u.id !== 369),
+        }));
+      } else {
+        setIsFollowing(true);
+        setProfile(prev => ({
+          ...prev,
+          followers: [
+            ...(prev.followers || []),
+            { id: 369, userName: 'me', description: 'who I am?' },
+          ],
+        }));
+      }
+    } catch (error) {
+      console.error('Error updating follow state:', error);
     }
   };
 
   const getInitials = () => {
-    return profile.fullName
-      ? profile.fullName
-          .split(' ')
-          .map(word => word[0])
-          .join('')
-          .slice(0, 2)
-          .toUpperCase()
-      : '';
+    try {
+      return profile.fullName
+        ? profile.fullName
+            .split(' ')
+            .map(word => word[0])
+            .join('')
+            .slice(0, 2)
+            .toUpperCase()
+        : '';
+    } catch (error) {
+      console.error('Error getting initials:', error);
+      return '';
+    }
   };
 
   return (
@@ -63,18 +80,26 @@ const ViewProfileScreen = ({ route, navigation }) => {
 
       <View style={styles.followContainer}>
         <TouchableOpacity
-          onPress={() =>
-            navigation.navigate('FollowersList', { users: profile.followers || [] })
-          }
+          onPress={() => {
+            try {
+              navigation.navigate('FollowersList', { users: profile.followers || [] });
+            } catch (error) {
+              console.error('Error navigating to FollowersList:', error);
+            }
+          }}
         >
           <Text style={styles.followCount}>{profile.followers?.length || 0}</Text>
           <Text style={styles.followLabel}>Followers</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
-          onPress={() =>
-            navigation.navigate('FollowingList', { users: profile.following || [] })
-          }
+          onPress={() => {
+            try {
+              navigation.navigate('FollowingList', { users: profile.following || [] });
+            } catch (error) {
+              console.error('Error navigating to FollowingList:', error);
+            }
+          }}
         >
           <Text style={styles.followCount}>{profile.following?.length || 0}</Text>
           <Text style={styles.followLabel}>Following</Text>
@@ -98,9 +123,13 @@ const ViewProfileScreen = ({ route, navigation }) => {
           </Card.Content>
         </Card>
       ) : (
-        <Text style={styles.biography}>
-          Hello there! I am using this app :D
-        </Text>
+        <Card style={styles.profileCard}>
+          <Card.Content>
+            <Text style={styles.sectionTitle}>About me</Text>
+            <Divider style={styles.divider} />
+            <Text>Hello there! I am using this app :D</Text>
+          </Card.Content>
+        </Card>
       )}
     </ScrollView>
   );

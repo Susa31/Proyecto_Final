@@ -48,7 +48,7 @@ const ViewProfileScreen = ({ route, navigation }) => {
         const following = await checkIfFollowing(currentUserId, profile.id);
         setIsFollowing(following);
       } catch (error) {
-        console.error("Error al verificar 'follow': ", error);
+        console.error("Error while verifying 'follow': ", error);
       } finally {
         setLoadingFollow(false);
       }
@@ -141,7 +141,7 @@ const ViewProfileScreen = ({ route, navigation }) => {
               disabled={loadingFollow}
               color={isFollowing ? '#888' : '#6200EE'}
             >
-              {isFollowing ? 'Siguiendo' : 'Seguir'}
+              {isFollowing ? 'Following' : 'Follow'}
             </Button>
         )}
       </View>

@@ -98,16 +98,16 @@ const Register = ({ navigation }) => {
             <ScrollView contentContainerStyle={styles.scrollContainer}>
                 <View style={styles.headerContainer}>
                     <Image
-                        source={{ uri: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop' }}
+                        source={require('../Assets/zentroLogo.png')}
                         style={styles.profileImage}
                         onError={(e) => console.log('Error loading image', e.nativeEvent.error)} 
                     />
-                    <Text style={styles.title}>Crear un perfil</Text>
+                    <Text style={styles.title}>Create a profile</Text>
                 </View>
                 <Card>
                     <Card.Content>
                         <TextInput 
-                            label='* Name Full' 
+                            label='* Full name' 
                             value={nameFull} 
                             onChangeText={setNameFull} 
                             style={styles.input} 
@@ -116,7 +116,7 @@ const Register = ({ navigation }) => {
                         />
     
                         <TextInput 
-                            label='* User name' 
+                            label='* Username' 
                             value={nameUser} 
                             onChangeText={setNameUser} 
                             style={styles.input} 

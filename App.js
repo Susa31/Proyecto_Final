@@ -1,50 +1,46 @@
-import React from "react";
+// App.js
+import React, { useEffect } from "react"; // ¡Importamos useEffect!
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { PaperProvider } from "react-native-paper";
+
+// ¡Importamos la librería de Google!
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+
 import Login from './src/Screens/Login';
 import Register from './src/Screens/Register';
-import ViewUser from './src/Screens/ViewUser';
-import ZHeader from './src/Components/ZHeader';
 import PublishPost from './src/Screens/PublishPost';
 import Feed from './src/Screens/Feed';
 import ViewPost from './src/Screens/ViewPost';
 import ViewProfileScreen from './src/Screens/ViewProfileScreen';
 import FollowersListScreen from './src/Screens/FollowersListScreen';
 import FollowingListScreen from './src/Screens/FollowingListScreen';
-
+import SearchScreen from './src/Screens/SearchScreen'; 
 
 const Stack = createNativeStackNavigator();
 
 export default function App() {
-  /*const easyExampleProfile = {
-    id: 1,
-    fullName: 'Laura Shigihara',
-    userName: 'lauraSH',
-    email: 'laura@pvz.com',
-    password: '1234567890',
-    description: 'Singer and composer of “Zombie on Your Lawn” from PvZ and George’s girlfriend',
-    avatarUrl: '',
-    followers: [{
-        id: 3,fullName: 'Marsiglia Alejandro', userName: 'follower1', description: ''
-    }],
-    following: [{id: 2,fullName: 'Alejandro Marsiglia', userName: 'following11', description: 'I love your music!'}],
-};-*/
 
-
-  const username = "UserHolda"; 
-  //Work with user data later, just a placeholder for now
-  //ZHeader is added globally, may change later
-
+  // --- ¡ARREGLO DEL ERROR DE HOOKS! ---
+  // Todos los Hooks DEBEN ir al principio del componente.
+  useEffect(() => {
+    GoogleSignin.configure({
+      // ¡RECUERDA PEGAR TU 'client_id' (client_type: 3) AQUÍ!
+      // Lo encuentras en tu NUEVO google-services.json
+      webClientId: 'TU_WEB_CLIENT_ID.apps.googleusercontent.com', 
+    });
+  }, []); // El array vacío [] significa que esto solo se ejecuta 1 vez
+  
+  // ¡Cualquier lógica de 'if (usuario)' iría DESPUÉS de los hooks!
+  
   return (
     <PaperProvider>
       <NavigationContainer>
-        <ZHeader username = {username}/>
         <Stack.Navigator initialRouteName="Login">          
           <Stack.Screen
             name="Login"
             component={Login}
-            options={{ title: 'Login'}}
+            options={{ headerShown: false }}
           />
           <Stack.Screen
             name="Register"
@@ -55,13 +51,11 @@ export default function App() {
             name="Feed"
             component={Feed}
             options={{ headerShown: false }}
-            initialParams={{ username }}
           />
           <Stack.Screen
             name="PublishPost"
             component={PublishPost}
             options={{ headerShown: false }}
-            initialParams={{username}}
           />
           <Stack.Screen
             name="ViewPost"
@@ -71,20 +65,26 @@ export default function App() {
            <Stack.Screen
              name="ViewProfile"
              component={ViewProfileScreen}
-             initialParams={{ profile1: easyExampleProfile }}
+             options={{ title: 'Profile' }}
            />
            <Stack.Screen
-              name="FollowersList"
-              component={FollowersListScreen}
-            />
+             name="FollowersList"
+             component={FollowersListScreen}
+             options={{ title: 'Followers' }}
+           />
             <Stack.Screen
                name="FollowingList"
                component={FollowingListScreen}
-            />
+               options={{ title: 'Following' }}
+             />
+            <Stack.Screen
+               name="Search"
+               component={SearchScreen}
+               options={{ title: 'Search User' }}
+             />
 
         </Stack.Navigator>
       </NavigationContainer>
     </PaperProvider>
   );
 }
-

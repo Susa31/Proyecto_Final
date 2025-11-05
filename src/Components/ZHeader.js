@@ -1,3 +1,4 @@
+// src/Components/ZHeader.js
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -5,6 +6,14 @@ import { auth } from '../config/firebase';
 import { Appbar, Avatar } from 'react-native-paper'; 
 
 const ZHeader = ({ user, navigation }) => {
+  const handleLogout = async () => {
+    try {
+      await auth().signOut(); 
+      navigation.replace('Login'); 
+    } catch (error) {
+      console.error("Error when logging out: ", error);
+    }
+  };
 
   const handleSearch = () => {
     navigation.navigate('Search', { currentUser: user }); 
@@ -57,7 +66,7 @@ const ZHeader = ({ user, navigation }) => {
           color="white"
           onPress={handleSearch}
         />
-        <TouchableOpacity onPress={}> //Add logout later <--
+        <TouchableOpacity onPress={handleLogout}>
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
       </View>
@@ -103,7 +112,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     paddingLeft: 5,
   }
-});//Closes styles
+});//Closes Styles
 
 export default ZHeader;
 

@@ -1,67 +1,88 @@
-import React, { useState } from 'react';
-import { View, FlatList, Text, TouchableOpacity } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, FlatList, Text, TouchableOpacity, ActivityIndicator, Alert, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card, Button } from 'react-native-paper';
+import ZHeader from '../Components/ZHeader';
+import { getFeedTweets } from '../config/firebaseService';
 
 const Feed = ({ navigation, route }) => {
-  const { username } = route.params;
-  //An array of posts,  pagination starting at page 1, max number of posts per page
+  const { user } = route.params; 
   const [posts, setPosts] = useState([]); 
+  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1); 
   const MAX_POSTS_PAGE = 10;
 
-  //Pagination logic here, start and end indexes (Indexes start at 0, keep that in mind)
+  useEffect(() => {
+    const loadFeed = async () => {
+        setLoading(true);
+        try {
+            const feedPosts = await getFeedTweets(user.uid);
+            setPosts(feedPosts); 
+        } catch (error) {
+            console.error("Error while loading the Feed: ", error);
+            if (error.code === 'firestore/failed-precondition') {
+                Alert.alert(
+                    "Database Error", 
+                    "Your app requires a database index, please check the debug console and click the link to create the index. The app will not function until it is created"
+                );
+            } else {
+                Alert.alert("Error", "Could not load feed");
+            }
+        } finally {
+            setLoading(false);
+        }
+    };
+    loadFeed();
+  }, [user.uid]);
+  
   const start = (page - 1) * MAX_POSTS_PAGE;
   const end = start + MAX_POSTS_PAGE;
-  const visiblePosts = posts.slice(start, end); //To get array of posts for the current page
+  const visiblePosts = posts.slice(start, end); 
 
-  //Updates posts after viewing (like adding comments or likes)
   const updatePost = (updatedPost) => {
     setPosts((prevPosts) =>
       prevPosts.map((p) => (p.id === updatedPost.id ? updatedPost : p))
     );
   };
 
-  //This here renders each post item
   const renderItem = ({ item }) => (
     <TouchableOpacity
-    onPress={() => navigation.navigate('ViewPost', { post: item, username, updatePost })}
+      onPress={() => navigation.navigate('ViewPost', { post: item, user: user, updatePost })}
     >
-    <Card style={{ margin: 10 }}>
-      <Card.Content>
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-          <Text style={{ fontWeight: 'bold' }}>{item.fullname} @{item.username}</Text>
-          <Text style={{ color: 'gray', fontSize: 12 }}>{item.createdAt}</Text>
-        </View>
-        <Text style={{ marginTop: 5 }}>{item.content}</Text>
-        <View style={{ flexDirection: 'row', marginTop: 10, justifyContent: 'space-between' }}>
-            <Text> {item.likes?.length || 0} Likes</Text>
-            <Text> {item.comments?.length || 0} Comments</Text>
+      <Card style={styles.card}>
+        <Card.Content>
+          <View style={styles.postHeader}>
+            <Text style={styles.postNames}>{item.authorNameFull} @{item.authorNameUser}</Text>
+            <Text style={styles.postDate}>{item.createdAt}</Text>
           </View>
-      </Card.Content>
-    </Card>
+          <Text style={styles.postContent}>{item.text}</Text> 
+          <View style={styles.postActions}>
+              <Text style={styles.actionText}> {(item.likes || []).length} Likes</Text>
+              <Text style={styles.actionText}> {(item.comments || []).length} Comments</Text>
+            </View>
+        </Card.Content>
+      </Card>
     </TouchableOpacity>
-  ); //Might add Avatar later
+  ); 
 
-  //This if there are no posts to show, yet...
   const listIfEmpty = (
-    <View style={{ padding: 20 }}>
-      <Text>Nothing to show here, yet...</Text>
+    <View style={styles.emptyContainer}>
+      <Text style={styles.emptyText}>Nothing to show yet... Go Post something or Follow someone!</Text>
     </View>
   );
 
-  //Post, Previous and Next buttons here
   const listFooter = (
     <>
-      <View style={{ padding: 10 }}>
+      <View style={styles.footerButtonContainer}>
         <Button
           mode="contained"
           buttonColor="#8A2BE2"
           onPress={() =>
             navigation.navigate('PublishPost', {
+              user: user,
               onPublish: (newPost) => {
-                setPosts(prev => [{...newPost, likes: [], comments: [],},...prev]); //Add Post (It goes to the top)
-                setPage(1); //Go to first page
+                setPosts(prev => [newPost, ...prev]);
+                setPage(1);
               }
             })
           }
@@ -69,48 +90,107 @@ const Feed = ({ navigation, route }) => {
           Post
         </Button>
       </View>
-
-      <View style={{ flexDirection: 'row', justifyContent: 'space-between', padding: 10 }}>
+      <View style={styles.paginationContainer}>
         <Button
-          disabled={page === 1} //Can't go back from page 1
+          disabled={page === 1}
           onPress={() => setPage(prev => prev - 1)}
         >
           Previous
         </Button>
+        <Text style={styles.paginationText}>Page {page}</Text>
         <Button
-          disabled={end >= posts.length} //Disable if you are at the last page
+          disabled={end >= posts.length}
           onPress={() => setPage(prev => prev + 1)}
         >
           Next
         </Button>
       </View>
     </>
-  ); //Note: Should add a Page indicator over here in the footer later <-----
-     /////
+  ); 
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
-      <View style={{ alignItems: 'center' }}>
-        <Text style={{ fontSize: 17, fontWeight: 'bold', color: '#333', marginBottom: 13 }}>
-          Your Feed
-        </Text>
-      </View>
+    <SafeAreaView style={styles.container}>
+      <ZHeader user={user} navigation={navigation} />
 
-      <FlatList
-        data={visiblePosts} //Visible posts only, not all of them
-        renderItem={renderItem}
-        keyExtractor={item => item.id} //To identify by id
-        ListEmptyComponent={listIfEmpty}
-        ListFooterComponent={listFooter}
-      />
+      {loading ? (
+        <ActivityIndicator style={{marginTop: 30}} size="large" />
+      ) : (
+        <FlatList
+          data={visiblePosts}
+          renderItem={renderItem}
+          keyExtractor={item => item.id}
+          ListEmptyComponent={listIfEmpty}
+          ListFooterComponent={listFooter}
+        />
+      )}
     </SafeAreaView>
   );
-};//Closes Feed component
+}; //Closes Feed
+
+//Some new Styles for legibility
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: '#f0f2f5'
+    },
+    card: {
+        marginVertical: 8,
+        marginHorizontal: 10,
+        elevation: 1,
+    },
+    postHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 8,
+    },
+    postNames: {
+        fontWeight: 'bold',
+        fontSize: 16,
+    },
+    postDate: {
+        color: 'gray',
+        fontSize: 12,
+        alignSelf: 'center'
+    },
+    postContent: {
+        fontSize: 15,
+        lineHeight: 22,
+    },
+    postActions: {
+        flexDirection: 'row',
+        marginTop: 12,
+        justifyContent: 'space-around',
+        borderTopWidth: 1,
+        borderTopColor: '#eee',
+        paddingTop: 10,
+    },
+    actionText: {
+        color: '#555'
+    },
+    emptyContainer: {
+        padding: 20,
+        alignItems: 'center',
+        marginTop: 50,
+    },
+    emptyText: {
+        fontSize: 16,
+        color: 'gray'
+    },
+    footerButtonContainer: {
+        padding: 10,
+        borderTopWidth: 1,
+        borderColor: '#eee',
+    },
+    paginationContainer: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        padding: 10,
+        alignItems: 'center'
+    },
+    paginationText: {
+        fontSize: 16,
+        color: '#333'
+    }
+}); //Closes Styles
 
 export default Feed;
-
-//No Styles applied, yet...
-//Based on FlatList example from React Native docs
-
-//Right now there is a debugger message about passing functions in route params
-//But this doesn't affect the app functionality

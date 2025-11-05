@@ -1,0 +1,23 @@
+[33mcommit fcfeabb7709b72fdd6b5edd04f9262470d402dc5[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mFeatures-Profile-and-Following-System[m[33m, [m[1;31morigin/Features-Profile-and-Following-System[m[33m)[m
+Author: Nico vélez <arangonicovelez@gmail.com>
+Date:   Wed Nov 5 03:50:08 2025 -0500
+
+    Remove package-lock.json from commits
+
+[33mcommit d82f3f254496ac9dec5787f607dc9d3a5ac2cefa[m
+Author: Nico vélez <arangonicovelez@gmail.com>
+Date:   Wed Nov 5 02:54:45 2025 -0500
+
+    Implemented firestore on existing features ViewProfile,Following and Followers
+
+[33mcommit f1ba4489c6e668d4e98c00e05d75724443c712e4[m
+Author: Nico vélez <arangonicovelez@gmail.com>
+Date:   Tue Nov 4 23:51:44 2025 -0500
+
+    View profile,Following and Followers Screens. Use of Try/Catch
+
+[33mcommit d2de3374651e89626be5d6a2f6acbb292146434b[m
+Author: Susa31 <Susana.Sanchez81@correo.tdea.edu.co>
+Date:   Sat Oct 18 19:14:05 2025 -0500
+
+    My first commit

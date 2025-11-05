@@ -1,138 +1,156 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, Button, TouchableOpacity } from 'react-native';
-import { Card, Avatar, Divider, Text } from 'react-native-paper';
-import styles from '../styles/screenStyles';
+import { View, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
+import { List, Avatar, Divider, Button, Text } from 'react-native-paper';
+import { firestore } from '../config/firebase';
+const itemsPage = 10;
 
-const ViewProfileScreen = ({ route, navigation }) => {
-  const { profile1 } = route.params;
-  const [profile, setProfile] = useState(profile1);
-  const [isFollowing, setIsFollowing] = useState(false);
+const FollowingListScreen = ({ route, navigation }) => {
+  const { userId } = route.params;
+
+  const [loading, setLoading] = useState(true);
+  const [users, setUsers] = useState([]);
+  const [page, setPage] = useState(1);
 
   useEffect(() => {
-    try {
-      console.log('Viewing profile of:', profile.fullName);
-    } catch (error) {
-      console.error('Error in useEffect:', error);
-    }
-  }, [profile]);
+    const fetchFollowing = async () => {
+      setLoading(true);
+      try {
+        const followingList = [];
+        const snapshot = await firestore()
+          .collection('users')
+          .doc(userId)
+          .collection('following')
+          .get();
 
-  const handleGoBack = () => {
-    try {
-      navigation.goBack();
-    } catch (error) {
-      console.error('Error going back:', error);
-    }
-  };
+        for (const doc of snapshot.docs) {
+          const userProfileDoc = await firestore().collection('users').doc(doc.id).get();
+          if (userProfileDoc.exists) {
+            followingList.push({ id: userProfileDoc.id, ...userProfileDoc.data() });
+          }
+        }
+        
+        const sortedUsers = followingList.sort((a, b) =>
+          (a.nameFull || '').toLowerCase().localeCompare((b.nameFull || '').toLowerCase())
+        );
 
-  const handleFollow = () => {
-    try {
-      if (isFollowing) {
-        setIsFollowing(false);
-        setProfile(prev => ({
-          ...prev,
-          followers: prev.followers.filter(u => u.id !== 369),
-        }));
-      } else {
-        setIsFollowing(true);
-        setProfile(prev => ({
-          ...prev,
-          followers: [
-            ...(prev.followers || []),
-            { id: 369, userName: 'me', description: 'who I am?' },
-          ],
-        }));
+        setUsers(sortedUsers);
+        setLoading(false);
+      } catch (error) {
+        console.log('Error loading following list', error);
+        setLoading(false);
       }
-    } catch (error) {
-      console.error('Error updating follow state:', error);
-    }
+    };
+
+    fetchFollowing();
+  }, [userId]);
+
+  const totalPages = Math.ceil(users.length / itemsPage);
+  const startIndex = (page - 1) * itemsPage;
+  const endIndex = startIndex + itemsPage;
+  const paginatedUsers = users.slice(startIndex, endIndex);
+
+  const renderItem = ({ item }) => {
+    return (
+      <TouchableOpacity
+        onPress={() => navigation.navigate('ViewProfile', { profile1: item, currentUser: auth().currentUser })}
+      >
+        <List.Item
+          title={item.nameFull}
+          description={'@' + (item.nameUser || item.userName)}
+          titleStyle={styles.listItemTitle}
+          descriptionStyle={styles.listItemDescription}
+          style={styles.listItem}
+          left={props =>
+            item.avatarUrl ? (
+              <Avatar.Image {...props} source={{ uri: item.avatarUrl }} size={48} />
+            ) : (
+              <Avatar.Text
+                {...props}
+                label={`${item.nameFull?.[0] || ''}`.toUpperCase()}
+                size={48}
+                style={{ backgroundColor: '#7C4DFF' }}
+                color='#FFFFFF'
+              />
+            )
+          }
+        />
+        <Divider style={styles.divider} />
+      </TouchableOpacity>
+    );
   };
 
-  const getInitials = () => {
-    try {
-      return profile.fullName
-        ? profile.fullName
-            .split(' ')
-            .map(word => word[0])
-            .join('')
-            .slice(0, 2)
-            .toUpperCase()
-        : '';
-    } catch (error) {
-      console.error('Error getting initials:', error);
-      return '';
-    }
-  };
+  if (loading) {
+    return <ActivityIndicator style={{ marginTop: 30 }} size="large" />;
+  }
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.profileHeader}>
-        {profile.avatarUrl ? (
-          <Avatar.Image
-            size={100}
-            source={{ uri: profile.avatarUrl }}
-            style={styles.avatar}
-          />
-        ) : (
-          <Avatar.Text size={100} label={getInitials()} style={styles.avatar} />
-        )}
-        <Text style={styles.profileName}>{profile.fullName}</Text>
-      </View>
+    <View style={styles.container}>
+      <FlatList
+        data={paginatedUsers}
+        renderItem={renderItem}
+        keyExtractor={item => item.id.toString()}
+        ListEmptyComponent={
+          <Text style={{ textAlign: 'center', marginTop: 20, color: '#4A148C' }}>
+            This person is not following anyone yet
+          </Text>
+        }
+      />
 
-      <View style={styles.followContainer}>
-        <TouchableOpacity
-          onPress={() => {
-            try {
-              navigation.navigate('FollowersList', { users: profile.followers || [] });
-            } catch (error) {
-              console.error('Error navigating to FollowersList:', error);
-            }
-          }}
-        >
-          <Text style={styles.followCount}>{profile.followers?.length || 0}</Text>
-          <Text style={styles.followLabel}>Followers</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => {
-            try {
-              navigation.navigate('FollowingList', { users: profile.following || [] });
-            } catch (error) {
-              console.error('Error navigating to FollowingList:', error);
-            }
-          }}
-        >
-          <Text style={styles.followCount}>{profile.following?.length || 0}</Text>
-          <Text style={styles.followLabel}>Following</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.buttonContainer}>
+      <View style={styles.paginationContainer}>
         <Button
-          title={isFollowing ? 'Following' : 'Follow'}
-          onPress={handleFollow}
-          color={isFollowing ? '#888' : '#6200EE'}
-        />
+          mode='outlined'
+          disabled={page === 1}
+          onPress={() => setPage(page - 1)}
+        >
+          Previous
+        </Button>
+
+        <Text style={styles.paginationText}>
+          Page {page} of {totalPages}
+        </Text>
+
+        <Button
+          mode='outlined'
+          disabled={page === totalPages}
+          onPress={() => setPage(page + 1)}
+        >
+          Next
+        </Button>
       </View>
-
-      {profile.description ? (
-        <Card style={styles.profileCard}>
-          <Card.Content>
-            <Text style={styles.sectionTitle}>About me</Text>
-            <Divider style={styles.divider} />
-            <Text style={styles.biography}>{profile.description}</Text>
-          </Card.Content>
-        </Card>
-      ) : (
-        <Card style={styles.profileCard}>
-          <Card.Content>
-            <Text style={styles.sectionTitle}>About me</Text>
-            <Divider style={styles.divider} />
-            <Text>Hello there! I am using this app :D</Text>
-          </Card.Content>
-        </Card>
-      )}
-    </ScrollView>
+    </View>
   );
-}; //Closes ViewProfileScreen
+}; 
 
-export default ViewProfileScreen;
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  listItem: {
+    padding: 10,
+  },
+  listItemTitle: {
+    fontWeight: 'bold',
+  },
+  listItemDescription: {
+    fontSize: 12,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: '#eee',
+  },
+  paginationContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 15,
+    borderTopWidth: 1,
+    borderColor: '#eee',
+  },
+  paginationText: {
+    fontSize: 16,
+    color: '#333',
+  },
+});
+
+export default FollowingListScreen;

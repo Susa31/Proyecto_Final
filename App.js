@@ -12,10 +12,10 @@ import Register from './src/Screens/Register';
 import PublishPost from './src/Screens/PublishPost';
 import Feed from './src/Screens/Feed';
 import ViewPost from './src/Screens/ViewPost';
-import ViewProfileScreen from './src/Screens/ViewProfileScreen';
-import FollowersListScreen from './src/Screens/FollowersListScreen';
-import FollowingListScreen from './src/Screens/FollowingListScreen';
-import SearchScreen from './src/Screens/SearchScreen'; 
+import ViewProfile from './src/Screens/ViewProfile';
+import FollowersList from './src/Screens/FollowersList';
+import FollowingList from './src/Screens/FollowingList';
+import Search from './src/Screens/Search'; 
 
 const Stack = createNativeStackNavigator();
 
@@ -64,22 +64,22 @@ export default function App() {
           />
            <Stack.Screen
              name="ViewProfile"
-             component={ViewProfileScreen}
+             component={ViewProfileg}
              options={{ title: 'Profile' }}
            />
            <Stack.Screen
              name="FollowersList"
-             component={FollowersListScreen}
+             component={FollowersList}
              options={{ title: 'Followers' }}
            />
             <Stack.Screen
                name="FollowingList"
-               component={FollowingListScreen}
+               component={FollowingList}
                options={{ title: 'Following' }}
              />
             <Stack.Screen
                name="Search"
-               component={SearchScreen}
+               component={Search}
                options={{ title: 'Search User' }}
              />
 

@@ -1,32 +1,35 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, Alert } from 'react-native';
+import { View, ScrollView, Alert, StyleSheet } from 'react-native';
 import { Card, Text, Button, TextInput } from 'react-native-paper';
+import { firestore } from '../config/firebase'; 
+import { updateTweetLikes, addCommentToTweet } from '../config/firebaseService';
 
 const ViewPost = ({ route }) => {
-    const { post, username, updatePost } = route.params;
-    const [ currentPost, setCurrentPost ] = useState(post); //State for the post being viewed
+    const { post, user, updatePost } = route.params; 
+    const [ currentPost, setCurrentPost ] = useState(post);
     const [ newComment, setNewComment ] = useState('');
 
-    //States for comment validation
     const [ isCommentValid, setIsCommentValid ] = useState(false);
     const [ commentCharCount, setCommentCharCount ] = useState(0);
 
-    //Validation based on PublishPost post validation
+    useEffect(() => {
+        setCurrentPost(post);
+    }, [post]);
+
     useEffect(() => {
         const trimmed = newComment.trim();
         setCommentCharCount(newComment.length);
         setIsCommentValid(trimmed.length > 0 && newComment.length <= 280);
     }, [newComment]);
 
-    //Logic for liking, works as a toggle to like and unlike
     const handleLike = () => {
-        const userHasLiked = currentPost.likes.includes(username); 
+        const userHasLiked = (currentPost.likes || []).includes(user.nameUser); 
         let updatedLikes;
         
         if (userHasLiked) {
-            updatedLikes = currentPost.likes.filter(user => user !== username);
+            updatedLikes = (currentPost.likes || []).filter(u => u !== user.nameUser);
         } else {
-            updatedLikes = [...currentPost.likes, username];
+            updatedLikes = [...(currentPost.likes || []), user.nameUser];
         }
         
         const updated = {
@@ -35,10 +38,13 @@ const ViewPost = ({ route }) => {
         };
         setCurrentPost(updated);
         updatePost(updated);
+        
+        updateTweetLikes(currentPost.id, updatedLikes)
+            .catch(err => {
+                console.error("Error when saving the Like: ", err);
+            });
     };
 
-    //Logic for adding a comment
-    //Double security like in PublishPost
     const handleAddComment = () => {
         if (!isCommentValid) {
             Alert.alert("Invalid Comment", "Your comment cannot be empty and must be under 280 characters.");
@@ -46,63 +52,69 @@ const ViewPost = ({ route }) => {
         }
 
         const trimmed = newComment.trim();
+        
         const comment = {
             id: Date.now().toString(),
-            fullname: 'FullName', 
-            username,
+            fullname: user.nameFull, 
+            username: user.nameUser, 
             text: trimmed,
-            createdAt: new Date().toLocaleString(),
+            createdAt: new Date(), 
+        };
+
+        const localComment = {
+            ...comment,
+            createdAt: comment.createdAt.toLocaleString(),
         };
 
         const updated = {
             ...currentPost,
-            comments: [comment, ...currentPost.comments],
+            comments: [localComment, ...(currentPost.comments || [])],
         };
-        //Updates for feed to update as well
+        
         setCurrentPost(updated);
         updatePost(updated);
         setNewComment('');
+        
+        addCommentToTweet(currentPost.id, comment)
+            .catch(err => {
+                console.error("Error when saving the comment: ", err);
+            });
     };
 
     return (
-        <ScrollView>
-            <View style={{ padding: 16 }}>
-                <Card style={{ marginBottom: 15 }}>
+        <ScrollView style={styles.container}>
+            <View style={styles.innerContainer}>
+                <Card style={styles.card}>
                     <Card.Content>
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                            <Text style={{ fontWeight: 'bold' }}>
-                                {currentPost.fullname} @{currentPost.username}
+                        <View style={styles.postHeader}>
+                            <Text style={styles.postNames}>
+                                {currentPost.authorNameFull} @{currentPost.authorNameUser}
                             </Text>
-                            <Text style={{ color: 'gray', fontSize: 12 }}>{currentPost.createdAt}</Text>
+                            <Text style={styles.postDate}>{currentPost.createdAt}</Text>
                         </View>
 
-                        <Text style={{ marginTop: 10, fontSize: 16 }}>{currentPost.content}</Text>
+                        <Text style={styles.postContent}>{currentPost.text}</Text>
 
-                        <View
-                            style={{
-                                flexDirection: 'row',
-                                justifyContent: 'space-between',
-                                marginTop: 15,
-                            }}
-                        >
+                        <View style={styles.postActions}>
                             <Button
                                 mode="contained"
                                 buttonColor="#8A2BE2"
                                 onPress={handleLike}
+                                icon={(currentPost.likes || []).includes(user.nameUser) ? 'heart' : 'heart-outline'}
                             >
-                                {currentPost.likes.length} Likes
+                                {(currentPost.likes || []).length} Likes
                             </Button>
 
                             <Button mode="outlined">
-                                {currentPost.comments.length} Comments
+                                {(currentPost.comments || []).length} Comments
                             </Button>
                         </View>
                     </Card.Content>
                 </Card>
 
-                <Card>
+                <Card style={styles.card}>
                     <Card.Content>
-                        <Text style={{ fontWeight: 'bold', marginBottom: 10 }}>Add a comment</Text>
+                        <Text style={styles.commentTitle}>Add a comment</Text>
                         <TextInput
                             label="Comment something!"
                             value={newComment}
@@ -113,7 +125,7 @@ const ViewPost = ({ route }) => {
                             style={{ marginBottom: 10 }}
                         />
                         
-                        <Text style={{ textAlign: 'right', marginBottom: 5 }}>
+                        <Text style={styles.charCount}>
                             {commentCharCount}/280
                         </Text>
                         
@@ -128,27 +140,22 @@ const ViewPost = ({ route }) => {
                     </Card.Content>
                 </Card>
 
-                <View style={{ marginTop: 20 }}>
-                    <Text style={{ fontWeight: 'bold', fontSize: 16, marginBottom: 10 }}>
-                        Comments ({currentPost.comments.length})
+                <View style={styles.commentsList}>
+                    <Text style={styles.commentTitle}>
+                        Comments ({(currentPost.comments || []).length})
                     </Text>
-                    {currentPost.comments.map((comment) => (
-                        <Card key={comment.id} style={{ marginBottom: 8 }}>
+                    {(currentPost.comments || []).map((comment) => (
+                        <Card key={comment.id} style={styles.commentCard}>
                             <Card.Content>
-                                <View
-                                    style={{
-                                        flexDirection: 'row',
-                                        justifyContent: 'space-between',
-                                    }}
-                                >
-                                    <Text style={{ fontWeight: 'bold' }}>
+                                <View style={styles.postHeader}>
+                                    <Text style={styles.commentAuthor}>
                                         {comment.fullname} @{comment.username}
                                     </Text>
-                                    <Text style={{ color: 'gray', fontSize: 11 }}>
-                                        {comment.createdAt}
+                                    <Text style={styles.commentDate}>
+                                        {comment.createdAt?.toString() || ''}
                                     </Text>
                                 </View>
-                                <Text style={{ marginTop: 4 }}>{comment.text}</Text>
+                                <Text style={styles.commentText}>{comment.text}</Text>
                             </Card.Content>
                         </Card>
                     ))}
@@ -156,7 +163,75 @@ const ViewPost = ({ route }) => {
             </View>
         </ScrollView>
     );
-};//Closes ViewPost component
+};//Closes ViewPost
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: '#f0f2f5',
+    },
+    innerContainer: {
+        padding: 16,
+    },
+    card: {
+        marginBottom: 15,
+        elevation: 1,
+    },
+    postHeader: {
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        marginBottom: 10,
+    },
+    postNames: {
+        fontWeight: 'bold',
+        fontSize: 16
+    },
+    postDate: {
+        color: 'gray',
+        fontSize: 12
+    },
+    postContent: {
+        marginTop: 10,
+        fontSize: 18, 
+        lineHeight: 26,
+    },
+    postActions: {
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        marginTop: 15,
+        borderTopWidth: 1,
+        borderTopColor: '#eee',
+        paddingTop: 15,
+    },
+    commentTitle: {
+        fontWeight: 'bold',
+        fontSize: 18,
+        marginBottom: 10,
+    },
+    charCount: {
+        textAlign: 'right',
+        marginBottom: 5,
+        color: 'gray'
+    },
+    commentsList: {
+        marginTop: 20,
+    },
+    commentCard: {
+        marginBottom: 8,
+        backgroundColor: '#fff'
+    },
+    commentAuthor: {
+        fontWeight: 'bold'
+    },
+    commentDate: {
+        color: 'gray',
+        fontSize: 11
+    },
+    commentText: {
+        marginTop: 4
+    }
+});//Closes styles
 
 export default ViewPost;
-//Styles not applied, yet...
+
+//Styles might change later

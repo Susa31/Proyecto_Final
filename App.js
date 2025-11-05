@@ -1,18 +1,13 @@
-// App.js
-import React, { useEffect } from "react"; // ¡Importamos useEffect!
+import React, { useEffect } from "react"; 
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { PaperProvider } from "react-native-paper";
-
-// ¡Importamos la librería de Google!
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
-
 import Login from './src/Screens/Login';
 import Register from './src/Screens/Register';
 import PublishPost from './src/Screens/PublishPost';
 import Feed from './src/Screens/Feed';
 import ViewPost from './src/Screens/ViewPost';
-import ViewProfile from './src/Screens/ViewProfile';
 import FollowersList from './src/Screens/FollowersList';
 import FollowingList from './src/Screens/FollowingList';
 import Search from './src/Screens/Search'; 
@@ -20,18 +15,11 @@ import Search from './src/Screens/Search';
 const Stack = createNativeStackNavigator();
 
 export default function App() {
-
-  // --- ¡ARREGLO DEL ERROR DE HOOKS! ---
-  // Todos los Hooks DEBEN ir al principio del componente.
   useEffect(() => {
     GoogleSignin.configure({
-      // ¡RECUERDA PEGAR TU 'client_id' (client_type: 3) AQUÍ!
-      // Lo encuentras en tu NUEVO google-services.json
-      webClientId: 'TU_WEB_CLIENT_ID.apps.googleusercontent.com', 
+      webClientId: '839871506287-mjcbsc82g58q4lpoa8qk10f1t3tiir4s.apps.googleusercontent.com', 
     });
-  }, []); // El array vacío [] significa que esto solo se ejecuta 1 vez
-  
-  // ¡Cualquier lógica de 'if (usuario)' iría DESPUÉS de los hooks!
+  }, []); 
   
   return (
     <PaperProvider>
@@ -64,7 +52,7 @@ export default function App() {
           />
            <Stack.Screen
              name="ViewProfile"
-             component={ViewProfileg}
+             component={ViewProfile}
              options={{ title: 'Profile' }}
            />
            <Stack.Screen
@@ -87,4 +75,4 @@ export default function App() {
       </NavigationContainer>
     </PaperProvider>
   );
-}
+}//Closes App

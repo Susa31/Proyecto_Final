@@ -12,7 +12,12 @@
           "package_name": "com.projecto"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "839871506287-mjcbsc82g58q4lpoa8qk10f1t3tiir4s.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAf6Gkmetdgfte0KJsXMie5y-qlnCn2AiI"
@@ -20,7 +25,12 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "839871506287-mjcbsc82g58q4lpoa8qk10f1t3tiir4s.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
         }
       }
     }

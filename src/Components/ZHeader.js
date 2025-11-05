@@ -6,24 +6,21 @@ import { auth } from '../config/firebase';
 import { Appbar, Avatar } from 'react-native-paper'; 
 
 const ZHeader = ({ user, navigation }) => {
-
   const handleLogout = async () => {
     try {
       await auth().signOut(); 
       navigation.replace('Login'); 
     } catch (error) {
-      console.error("Error al cerrar sesión: ", error);
+      console.error("Error when logging out: ", error);
     }
   };
 
   const handleSearch = () => {
-    // Pasa el 'user' (que tiene .id)
     navigation.navigate('Search', { currentUser: user }); 
   };
 
   const handleGoToProfile = () => {
     if (user) {
-      // ¡Pasa los IDs que la pantalla de perfil ahora espera!
       navigation.navigate('ViewProfile', { 
           profileId: user.id, 
           currentUserId: user.id 
@@ -36,9 +33,9 @@ const ZHeader = ({ user, navigation }) => {
       if (!user || !user.nameFull) return '..';
       return user.nameFull
         ? user.nameFull.split(' ').map(word => word[0]).join('').slice(0, 2).toUpperCase()
-        : 'NN';
+        : 'No Name';
     } catch (error) {
-      return 'NN';
+      return 'No Name';
     }
   };
 
@@ -61,7 +58,7 @@ const ZHeader = ({ user, navigation }) => {
         </TouchableOpacity>
 
         <Text style={styles.username}>
-          @{user ? user.nameUser : 'Invitado'}
+          @{user ? user.nameUser : 'Guest'}
         </Text>
 
         <Appbar.Action
@@ -115,6 +112,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     paddingLeft: 5,
   }
-});
+});//Closes Styles
 
 export default ZHeader;
+
+//Styles might change later

@@ -6,15 +6,6 @@ import { Appbar, Avatar } from 'react-native-paper';
 
 const ZHeader = ({ user, navigation }) => {
 
-  const handleLogout = async () => {
-    try {
-      await auth().signOut(); 
-      navigation.replace('Login'); 
-    } catch (error) {
-      console.error("Error when Logging out: ", error);
-    }
-  };
-
   const handleSearch = () => {
     navigation.navigate('Search', { currentUser: user }); 
   };
@@ -66,7 +57,7 @@ const ZHeader = ({ user, navigation }) => {
           color="white"
           onPress={handleSearch}
         />
-        <TouchableOpacity onPress={handleLogout}>
+        <TouchableOpacity onPress={}> //Add logout later <--
           <Text style={styles.logoutText}>Logout</Text>
         </TouchableOpacity>
       </View>

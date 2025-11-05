@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, FlatList, Text } from 'react-native';
+import { View, FlatList, Text, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card, Button } from 'react-native-paper';
 
-const Feed = ({ navigation }) => {
+const Feed = ({ navigation, route }) => {
+  const { username } = route.params;
   //An array of posts,  pagination starting at page 1, max number of posts per page
   const [posts, setPosts] = useState([]); 
   const [page, setPage] = useState(1); 
@@ -14,8 +15,18 @@ const Feed = ({ navigation }) => {
   const end = start + MAX_POSTS_PAGE;
   const visiblePosts = posts.slice(start, end); //To get array of posts for the current page
 
+  //Updates posts after viewing (like adding comments or likes)
+  const updatePost = (updatedPost) => {
+    setPosts((prevPosts) =>
+      prevPosts.map((p) => (p.id === updatedPost.id ? updatedPost : p))
+    );
+  };
+
   //This here renders each post item
   const renderItem = ({ item }) => (
+    <TouchableOpacity
+    onPress={() => navigation.navigate('ViewPost', { post: item, username, updatePost })}
+    >
     <Card style={{ margin: 10 }}>
       <Card.Content>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
@@ -23,8 +34,13 @@ const Feed = ({ navigation }) => {
           <Text style={{ color: 'gray', fontSize: 12 }}>{item.createdAt}</Text>
         </View>
         <Text style={{ marginTop: 5 }}>{item.content}</Text>
+        <View style={{ flexDirection: 'row', marginTop: 10, justifyContent: 'space-between' }}>
+            <Text> {item.likes?.length || 0} Likes</Text>
+            <Text> {item.comments?.length || 0} Comments</Text>
+          </View>
       </Card.Content>
     </Card>
+    </TouchableOpacity>
   ); //Might add Avatar later
 
   //This if there are no posts to show, yet...
@@ -44,7 +60,7 @@ const Feed = ({ navigation }) => {
           onPress={() =>
             navigation.navigate('PublishPost', {
               onPublish: (newPost) => {
-                setPosts(prev => [newPost, ...prev]); //Add Post (It goes to the top)
+                setPosts(prev => [{...newPost, likes: [], comments: [],},...prev]); //Add Post (It goes to the top)
                 setPage(1); //Go to first page
               }
             })

@@ -34,7 +34,9 @@ const PublishPost = ({ navigation, route }) => {
         content,
         fullname: 'FullName', //Replace with actual user data later <--
         username,
-        createdAt: new Date().toLocaleString() //Use ServerTimestamp later <--
+        createdAt: new Date().toLocaleString(), //Use ServerTimestamp later <--
+        likes: [],        
+        comments: []
     };
 
     if (route.params?.onPublish) {

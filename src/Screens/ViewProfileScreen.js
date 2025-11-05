@@ -1,156 +1,230 @@
 import React, { useState, useEffect } from 'react';
-import { View, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
-import { List, Avatar, Divider, Button, Text } from 'react-native-paper';
+import { View, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
+import { Card, Avatar, Divider, Text, Button, ActivityIndicator } from 'react-native-paper';
+import { checkIfFollowing, followUser, unfollowUser } from '../config/firebaseService';
 import { firestore } from '../config/firebase';
-const itemsPage = 10;
 
-const FollowingListScreen = ({ route, navigation }) => {
-  const { userId } = route.params;
+const ViewProfileScreen = ({ route, navigation }) => {
+  const { profileId, currentUserId } = route.params; 
 
-  const [loading, setLoading] = useState(true);
-  const [users, setUsers] = useState([]);
-  const [page, setPage] = useState(1);
+  const [profile, setProfile] = useState(null); 
+  const [isFollowing, setIsFollowing] = useState(false);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [loadingFollow, setLoadingFollow] = useState(false);
 
   useEffect(() => {
-    const fetchFollowing = async () => {
-      setLoading(true);
-      try {
-        const followingList = [];
-        const snapshot = await firestore()
-          .collection('users')
-          .doc(userId)
-          .collection('following')
-          .get();
-
-        for (const doc of snapshot.docs) {
-          const userProfileDoc = await firestore().collection('users').doc(doc.id).get();
-          if (userProfileDoc.exists) {
-            followingList.push({ id: userProfileDoc.id, ...userProfileDoc.data() });
+    setLoadingProfile(true);
+    const unsubscribe = firestore()
+      .collection('users')
+      .doc(profileId)
+      .onSnapshot(
+        (documentSnapshot) => {
+          if (documentSnapshot.exists) {
+            setProfile({ id: documentSnapshot.id, ...documentSnapshot.data() });
+          } else {
+            console.error("Can  not found profile with ID: ", profileId);
+            setProfile(null);
           }
+          setLoadingProfile(false);
+        },
+        (error) => {
+          console.error("Error listening to the profile", error);
+          setLoadingProfile(false);
         }
-        
-        const sortedUsers = followingList.sort((a, b) =>
-          (a.nameFull || '').toLowerCase().localeCompare((b.nameFull || '').toLowerCase())
-        );
+      );
 
-        setUsers(sortedUsers);
-        setLoading(false);
+    return () => unsubscribe(); 
+  }, [profileId]);
+
+  useEffect(() => {
+    if (!profile || !currentUserId || profile.id === currentUserId) {
+      setIsFollowing(false);
+      return; 
+    }
+
+    setLoadingFollow(true);
+    const checkFollow = async () => {
+      try {
+        const following = await checkIfFollowing(currentUserId, profile.id);
+        setIsFollowing(following);
       } catch (error) {
-        console.log('Error loading following list', error);
-        setLoading(false);
+        console.error("Error al verificar 'follow': ", error);
+      } finally {
+        setLoadingFollow(false);
       }
     };
+    checkFollow();
+  }, [profile, currentUserId]);
 
-    fetchFollowing();
-  }, [userId]);
-
-  const totalPages = Math.ceil(users.length / itemsPage);
-  const startIndex = (page - 1) * itemsPage;
-  const endIndex = startIndex + itemsPage;
-  const paginatedUsers = users.slice(startIndex, endIndex);
-
-  const renderItem = ({ item }) => {
-    return (
-      <TouchableOpacity
-        onPress={() => navigation.navigate('ViewProfile', { profile1: item, currentUser: auth().currentUser })}
-      >
-        <List.Item
-          title={item.nameFull}
-          description={'@' + (item.nameUser || item.userName)}
-          titleStyle={styles.listItemTitle}
-          descriptionStyle={styles.listItemDescription}
-          style={styles.listItem}
-          left={props =>
-            item.avatarUrl ? (
-              <Avatar.Image {...props} source={{ uri: item.avatarUrl }} size={48} />
-            ) : (
-              <Avatar.Text
-                {...props}
-                label={`${item.nameFull?.[0] || ''}`.toUpperCase()}
-                size={48}
-                style={{ backgroundColor: '#7C4DFF' }}
-                color='#FFFFFF'
-              />
-            )
-          }
-        />
-        <Divider style={styles.divider} />
-      </TouchableOpacity>
-    );
+  const handleFollow = async () => {
+    setLoadingFollow(true);
+    try {
+      if (isFollowing) {
+        await unfollowUser(currentUserId, profile.id);
+      } else {
+        await followUser(currentUserId, profile.id);
+      }
+    } catch (error) {
+      console.error("Error following/stop following: ", error);
+      setLoadingFollow(false);
+    }
   };
 
-  if (loading) {
-    return <ActivityIndicator style={{ marginTop: 30 }} size="large" />;
+  const getInitials = () => {
+    try {
+      if (!profile || !profile.nameFull) return '...';
+      return profile.nameFull
+        ? profile.nameFull.split(' ').map(word => word[0]).join('').slice(0, 2).toUpperCase()
+        : '';
+    } catch (error) {
+      return '';
+    }
+  };
+
+  if (loadingProfile) {
+    return <ActivityIndicator style={{ marginTop: 50 }} size="large" />;
   }
 
-  return (
-    <View style={styles.container}>
-      <FlatList
-        data={paginatedUsers}
-        renderItem={renderItem}
-        keyExtractor={item => item.id.toString()}
-        ListEmptyComponent={
-          <Text style={{ textAlign: 'center', marginTop: 20, color: '#4A148C' }}>
-            This person is not following anyone yet
-          </Text>
-        }
-      />
-
-      <View style={styles.paginationContainer}>
-        <Button
-          mode='outlined'
-          disabled={page === 1}
-          onPress={() => setPage(page - 1)}
-        >
-          Previous
-        </Button>
-
-        <Text style={styles.paginationText}>
-          Page {page} of {totalPages}
-        </Text>
-
-        <Button
-          mode='outlined'
-          disabled={page === totalPages}
-          onPress={() => setPage(page + 1)}
-        >
-          Next
-        </Button>
+  if (!profile) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.errorText}>Profile not found</Text>
+        <Button onPress={() => navigation.goBack()}>Go back</Button>
       </View>
-    </View>
+    );
+  }
+
+  const isMyProfile = currentUserId === profile.id;
+
+  return (
+    <ScrollView style={styles.container}>
+      <View style={styles.profileHeader}>
+        {profile.avatarUrl ? (
+          <Avatar.Image size={100} source={{ uri: profile.avatarUrl }} style={styles.avatar} />
+        ) : (
+          <Avatar.Text size={100} label={getInitials()} style={styles.avatar} />
+        )}
+        <Text style={styles.profileName}>{profile.nameFull}</Text>
+        <Text style={styles.profileUsername}>@{profile.nameUser || profile.userName}</Text> 
+      </View>
+
+      <View style={styles.followContainer}>
+        <TouchableOpacity
+          onPress={() => navigation.navigate('FollowersList', { 
+              userId: profile.id,
+              currentUserId: currentUserId
+            })}
+        >
+          <Text style={styles.followCount}>{profile.followersCount || 0}</Text>
+          <Text style={styles.followLabel}>Followers</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => navigation.navigate('FollowingList', { 
+              userId: profile.id,
+              currentUserId: currentUserId
+            })}
+        >
+          <Text style={styles.followCount}>{profile.followingCount || 0}</Text>
+          <Text style={styles.followLabel}>Following</Text>
+        </TouchableOpacity>
+      </View>
+
+      <View style={styles.buttonContainer}>
+        {isMyProfile ? (
+            <Button mode="outlined" disabled>This is your profile</Button>
+        ) : (
+            <Button
+              mode={isFollowing ? 'outlined' : 'contained'}
+              onPress={handleFollow}
+              loading={loadingFollow}
+              disabled={loadingFollow}
+              color={isFollowing ? '#888' : '#6200EE'}
+            >
+              {isFollowing ? 'Siguiendo' : 'Seguir'}
+            </Button>
+        )}
+      </View>
+
+      {profile.description ? (
+        <Card style={styles.profileCard}>
+          <Card.Content>
+            <Text style={styles.sectionTitle}>About me</Text>
+            <Divider style={styles.divider} />
+            <Text style={styles.biography}>{profile.description}</Text>
+          </Card.Content>
+        </Card>
+      ) : (
+        <Card style={styles.profileCard}>
+          <Card.Content>
+            <Text style={styles.sectionTitle}>About me</Text>
+            <Divider style={styles.divider} />
+            <Text>Hello there! I am using this app :D</Text>
+          </Card.Content>
+        </Card>
+      )}
+    </ScrollView>
   );
 }; 
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
+  container: { 
+    flex: 1, 
   },
-  listItem: {
-    padding: 10,
+  errorText: {
+    textAlign: 'center', 
+    marginTop: 30, 
+    fontSize: 18
   },
-  listItemTitle: {
-    fontWeight: 'bold',
+  profileHeader: { 
+    alignItems: 'center', 
+    padding: 20, 
   },
-  listItemDescription: {
-    fontSize: 12,
+  avatar: { 
+    marginBottom: 10, 
   },
-  divider: {
-    height: 1,
-    backgroundColor: '#eee',
+  profileName: { 
+    fontSize: 22, 
+    fontWeight: 'bold', 
   },
-  paginationContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 15,
-    borderTopWidth: 1,
-    borderColor: '#eee',
+  profileUsername: { 
+    fontSize: 16, 
+    color: 'gray', 
   },
-  paginationText: {
-    fontSize: 16,
-    color: '#333',
+  followContainer: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-around', 
+    padding: 10, 
+    borderTopWidth: 1, 
+    borderBottomWidth: 1, 
+    borderColor: '#eee', 
   },
+  followCount: { 
+    fontSize: 18, 
+    fontWeight: 'bold', 
+    textAlign: 'center', 
+  },
+  followLabel: { 
+    fontSize: 14, 
+    color: 'gray', 
+    textAlign: 'center', 
+  },
+  buttonContainer: { 
+    padding: 20, 
+  },
+  profileCard: { 
+    margin: 15, 
+  },
+  sectionTitle: { 
+    fontSize: 18, 
+    fontWeight: 'bold', 
+  },
+  divider: { 
+    marginVertical: 10, 
+  },
+  biography: { 
+    fontSize: 16, 
+  }
 });
 
-export default FollowingListScreen;
+export default ViewProfileScreen;

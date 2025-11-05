@@ -2,15 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { View, FlatList, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { List, Avatar, Divider, Button, Text } from 'react-native-paper';
 import { firestore } from '../config/firebase';
+import { useIsFocused } from '@react-navigation/native';
 
 const itemsPage = 10;
 
 const FollowersListScreen = ({ route, navigation }) => {
-  const { userId } = route.params;
-
+  const { userId, currentUser } = route.params;
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState([]);
   const [page, setPage] = useState(1);
+  const isFocused = useIsFocused(); 
 
   useEffect(() => {
     const fetchFollowers = async () => {
@@ -35,15 +36,18 @@ const FollowersListScreen = ({ route, navigation }) => {
         );
 
         setUsers(sortedUsers);
-        setLoading(false);
       } catch (error) {
         console.log('Error loading followers list', error);
+      } finally {
         setLoading(false);
       }
     };
 
-    fetchFollowers();
-  }, [userId]);
+    if (isFocused) {
+      fetchFollowers();
+    }
+    
+  }, [userId, isFocused]);
 
   const totalPages = Math.ceil(users.length / itemsPage);
   const startIndex = (page - 1) * itemsPage;
@@ -53,7 +57,10 @@ const FollowersListScreen = ({ route, navigation }) => {
   const renderItem = ({ item }) => {
     return (
       <TouchableOpacity
-        onPress={() => navigation.navigate('ViewProfile', { profile1: item, currentUser: auth().currentUser })}
+        onPress={() => navigation.navigate('ViewProfile', { 
+            profileId: item.id, 
+            currentUserId: currentUser.id 
+        })}
       >
         <List.Item
           title={item.nameFull}
@@ -91,30 +98,17 @@ const FollowersListScreen = ({ route, navigation }) => {
         renderItem={renderItem}
         keyExtractor={item => item.id.toString()}
         ListEmptyComponent={
-          <Text style={{ textAlign: 'center', marginTop: 20, color: '#4A148C' }}>
-            There are no followers to display yet
+          <Text style={styles.emptyText}>
+            This user has no followers yet
           </Text>
         }
       />
-
       <View style={styles.paginationContainer}>
-        <Button
-          mode='outlined'
-          disabled={page === 1}
-          onPress={() => setPage(page - 1)}
-        >
+        <Button mode='outlined' disabled={page === 1} onPress={() => setPage(page - 1)}>
           Previous
         </Button>
-
-        <Text style={styles.paginationText}>
-          Page {page} of {totalPages}
-        </Text>
-
-        <Button
-          mode='outlined'
-          disabled={page === totalPages}
-          onPress={() => setPage(page + 1)}
-        >
+        <Text style={styles.paginationText}>Page {page} of {totalPages}</Text>
+        <Button mode='outlined' disabled={page === totalPages} onPress={() => setPage(page + 1)}>
           Next
         </Button>
       </View>
@@ -123,35 +117,14 @@ const FollowersListScreen = ({ route, navigation }) => {
 }; 
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
-  listItem: {
-    padding: 10,
-  },
-  listItemTitle: {
-    fontWeight: 'bold',
-  },
-  listItemDescription: {
-    fontSize: 12,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: '#eee',
-  },
-  paginationContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 15,
-    borderTopWidth: 1,
-    borderColor: '#eee',
-  },
-  paginationText: {
-    fontSize: 16,
-    color: '#333',
-  },
+  container: { flex: 1, backgroundColor: '#fff', },
+  listItem: { padding: 10, },
+  listItemTitle: { fontWeight: 'bold', },
+  listItemDescription: { fontSize: 12, },
+  divider: { height: 1, backgroundColor: '#eee', },
+  paginationContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 15, borderTopWidth: 1, borderColor: '#eee', },
+  paginationText: { fontSize: 16, color: '#333', },
+  emptyText: { textAlign: 'center', marginTop: 20, color: '#4A148C' }
 });
 
 export default FollowersListScreen;

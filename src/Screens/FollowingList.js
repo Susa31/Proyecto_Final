@@ -6,7 +6,7 @@ import { useIsFocused } from '@react-navigation/native';
 
 const itemsPage = 10;
 
-const FollowingListScreen = ({ route, navigation }) => {
+const FollowingList = ({ route, navigation }) => {
   const { userId, currentUser } = route.params;
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState([]);
@@ -126,4 +126,4 @@ const styles = StyleSheet.create({
   emptyText: { textAlign: 'center', marginTop: 20, color: '#4A148C' }
 });
 
-export default FollowingListScreen;
+export default FollowingList;

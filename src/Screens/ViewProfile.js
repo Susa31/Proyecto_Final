@@ -4,7 +4,7 @@ import { Card, Avatar, Divider, Text, Button, ActivityIndicator } from 'react-na
 import { checkIfFollowing, followUser, unfollowUser } from '../config/firebaseService';
 import { firestore } from '../config/firebase';
 
-const ViewProfileScreen = ({ route, navigation }) => {
+const ViewProfile = ({ route, navigation }) => {
   const { profileId, currentUserId } = route.params; 
 
   const [profile, setProfile] = useState(null); 
@@ -227,4 +227,4 @@ const styles = StyleSheet.create({
   }
 });
 
-export default ViewProfileScreen;
+export default ViewProfile;

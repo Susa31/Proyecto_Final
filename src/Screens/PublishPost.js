@@ -26,10 +26,13 @@ const PublishPost = ({ navigation, route }) => {
         return;
     }
 
+    //Setting content to empty while publishing here, this is to avoid double posts
+    setContent(''); 
+    
     const newPost = {
         id: Date.now().toString(), //Simple id with timestamp
         content,
-        fullname: 'Full Name', //Replace with actual user data later <--
+        fullname: 'FullName', //Replace with actual user data later <--
         username,
         createdAt: new Date().toLocaleString() //Use ServerTimestamp later <--
     };
@@ -41,15 +44,11 @@ const PublishPost = ({ navigation, route }) => {
         'Your post has been successfully shared!',
         [{text: 'OK',
         onPress: () => { //Navigation inside onPress to show the alert before changing the screen
-                    setContent('');
-                    navigation.goBack();}
+            navigation.goBack();}
         }
         ])
     }
-    /*//In case of not using the alert
-      navigation.goBack(); 
-      setContent('');
-       */
+    
     };
 
     return (

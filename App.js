@@ -11,7 +11,8 @@ import Feed from './src/Screens/Feed';
 import ViewPost from './src/Screens/ViewPost';
 import FollowersList from './src/Screens/FollowersList';
 import FollowingList from './src/Screens/FollowingList';
-import Search from './src/Screens/Search'; 
+import Search from './src/Screens/Search';
+import ViewProfile from './src/Screens/ViewProfile';
 
 const Stack = createNativeStackNavigator();
 

@@ -163,7 +163,7 @@ const Register = ({ navigation }) => {
             </ScrollView>
         </KeyboardAvoidingView>
     );
-};
+};//Closes Register
 
 
 const styles = StyleSheet.create({
@@ -203,6 +203,6 @@ const styles = StyleSheet.create({
     button: {
         paddingVertical: 8,
     },
-});
+});//Closes styles
 
 export default Register;

@@ -158,7 +158,7 @@ export const listenToFeedTweets = (myId, onUpdate) => {
           .collection(TWEET_COLLECTION)
           .where('authorId', 'in', chunk)
           .orderBy('createdAdd', 'desc')
-          .limit(20)
+          .limit(100)
           .get();
   
         tweetsQuery.docs.forEach(doc => {

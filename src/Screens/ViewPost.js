@@ -184,23 +184,23 @@ const styles = StyleSheet.create({
     },
     postNames: {
         fontWeight: 'bold',
-        fontSize: 16
+        fontSize: 15
     },
     postDate: {
         color: 'gray',
-        fontSize: 12
+        fontSize: 11
     },
     postContent: {
-        marginTop: 10,
-        fontSize: 18, 
-        lineHeight: 26,
+        marginTop: 3,
+        fontSize: 16, 
+        lineHeight: 27,
     },
     postActions: {
         flexDirection: 'row',
         justifyContent: 'space-around',
-        marginTop: 15,
+        marginTop: 3,
         borderTopWidth: 1,
-        borderTopColor: '#eee',
+        borderTopColor: '#eeeeeeff',
         paddingTop: 15,
     },
     commentTitle: {

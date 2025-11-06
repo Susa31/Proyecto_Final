@@ -1,4 +1,3 @@
-    // src/Screens/Login.js
     import React, { useEffect, useState } from 'react';
     import { View, Alert, KeyboardAvoidingView, Platform, StyleSheet, Image } from 'react-native'; 
     import { Card, TextInput, Button, Text, ActivityIndicator, Divider } from 'react-native-paper'; 
@@ -49,7 +48,7 @@
                 navigation.replace('Feed', { user: userProfile });
             } catch (error) {
                 if (error.code === 'SIGN_IN_CANCELLED') {
-                    console.log("Login de Google cancelado");
+                    console.log("Google Login Cancelled");
                 } else {
                     console.error("Error de Google Login: ", error);
                     Alert.alert('Google Login Error', 'An error occurred. Please try again.');
@@ -63,7 +62,7 @@
             <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.container}>
                 <View style={styles.inner}>
                     
-                    <Text style={styles.title}>Bienvenido</Text>
+                    <Text style={styles.title}>Welcome to Zentro</Text>
                     
                     <Card style={styles.card}>
                         <Card.Content>
@@ -76,7 +75,7 @@
                             />
 
                             <TextInput
-                                label="User name"
+                                label="Username"
                                 value={nameUser}
                                 onChangeText={setNameUser}
                                 style={styles.input}
@@ -99,6 +98,7 @@
                             ) : (
                                 <Button
                                     mode="contained"
+                                    buttonColor="#8A2BE2"
                                     onPress={handleLogin}
                                     style={styles.button}
                                     icon="login"
@@ -108,7 +108,9 @@
                                 </Button>
                             )}
                             <Button
-                                mode="outlined" 
+                                mode="outlined"
+                                textColor="#8A2BE2"
+                                theme={{ colors: { outline: "#8A2BE2" } }}
                                 onPress={() => navigation.navigate('Register')} 
                                 style={styles.button}
                                 disabled={isGoogleLoading || isLoading}
@@ -134,7 +136,7 @@
                 </View>
             </KeyboardAvoidingView>
         );
-    };
+    };//Closes Login
 
     const styles = StyleSheet.create({
         container: {
@@ -176,6 +178,6 @@
             marginVertical: 20,
             height: 1,
         }
-    });
+    });//Closes styles
 
     export default Login;

@@ -132,46 +132,62 @@ export const publishTweet = async (tweetData) => {
     }
 };
 
-export const getFeedTweets = async (myId) => {
-    try {
-        const followingSnapshot = await firestore()
-            .collection(USER_COLLECTION)
-            .doc(myId)
-            .collection('following')
-            .get();
-        
-        const followingIds = followingSnapshot.docs.map(doc => doc.id);
-        const feedUserIds = [myId, ...followingIds];
-
+export const listenToFeedTweets = (myId, onUpdate) => {
+    const followingRef = firestore()
+      .collection(USER_COLLECTION)
+      .doc(myId)
+      .collection('following');
+  
+    return followingRef.onSnapshot(async (followingSnapshot) => {
+      const followingIds = followingSnapshot.docs.map(doc => doc.id);
+      const feedUserIds = [myId, ...followingIds];
+  
+      if (feedUserIds.length === 0) {
+        onUpdate([]);
+        return;
+      }
+  
+      const chunks = [];
+      while (feedUserIds.length > 0) {
+        chunks.push(feedUserIds.splice(0, 10));
+      }
+  
+      const allTweets = [];
+  
+      await Promise.all(chunks.map(async (chunk) => {
         const tweetsQuery = await firestore()
-            .collection(TWEET_COLLECTION)
-            .where('authorId', 'in', feedUserIds.slice(0, 10)) 
-            .orderBy('createdAdd', 'desc') 
-            .limit(20)
-            .get();
-            
-        const tweets = tweetsQuery.docs.map(doc => {
-            const data = doc.data();
-            const formattedComments = (data.comments || []).map(comment => ({
-                ...comment,
-                createdAt: comment.createdAt?.toDate ? comment.createdAt.toDate().toLocaleString() : comment.createdAt
-            }));
-
+          .collection(TWEET_COLLECTION)
+          .where('authorId', 'in', chunk)
+          .orderBy('createdAdd', 'desc')
+          .limit(20)
+          .get();
+  
+        tweetsQuery.docs.forEach(doc => {
+          const data = doc.data();
+  
+          const formattedComments = (data.comments || []).map(comment => {
             return {
-                id: doc.id,
-                ...data,
-                comments: formattedComments,
-                createdAt: data.createdAdd?.toDate().toLocaleString() || new Date().toLocaleString()
+              ...comment,
+              createdAt: comment.createdAt?.toDate ? comment.createdAt.toDate().toLocaleString() : comment.createdAt
             };
+          });
+  
+          allTweets.push({
+            id: doc.id,
+            ...data,
+            comments: formattedComments,
+            createdAt: data.createdAdd?.toDate().toLocaleString() || new Date().toLocaleString()
+          });
         });
-        
-        return tweets;
-        
-    } catch (error) {
-        console.error("Error obtaining feed: ", error);
-        throw error;
-    }
-};
+      }));
+  
+      const sortedTweets = allTweets.sort((a, b) => {
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      });
+  
+      onUpdate(sortedTweets);
+    });
+  };
 
 export const followUser = async (myId, theirId) => {
     try {

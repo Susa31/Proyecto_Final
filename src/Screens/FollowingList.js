@@ -7,7 +7,7 @@ import { useIsFocused } from '@react-navigation/native';
 const itemsPage = 10;
 
 const FollowingList = ({ route, navigation }) => {
-  const { userId, currentUser } = route.params;
+  const { userId, currentUserId } = route.params;
   const [loading, setLoading] = useState(true);
   const [users, setUsers] = useState([]);
   const [page, setPage] = useState(1);
@@ -57,12 +57,12 @@ const FollowingList = ({ route, navigation }) => {
       <TouchableOpacity
         onPress={() => navigation.navigate('ViewProfile', { 
             profileId: item.id, 
-            currentUserId: currentUser.id 
+            currentUserId: currentUserId 
         })}
       >
         <List.Item
           title={item.nameFull}
-          description={'@' + (item.nameUser || item.userName)}
+          description={'@' + (item.nameUser)}
           titleStyle={styles.listItemTitle}
           descriptionStyle={styles.listItemDescription}
           style={styles.listItem}

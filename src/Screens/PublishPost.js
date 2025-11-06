@@ -36,17 +36,12 @@ const PublishPost = ({ navigation, route }) => {
             const publishedPost = await publishTweet(newPostData);
 
             if (route.params?.onPublish) {
-                route.params.onPublish({ 
-                    ...publishedPost,
-                    text: publishedPost.text, 
-                    createdAt: new Date().toLocaleString() 
-                });
+                route.params.onPublish();
             }
             
             Alert.alert(
                 'Published',
-                'Your Post has been shared with the others!',
-                [{ text: 'OK', onPress: () => navigation.goBack() }]
+                'Your Post has been shared with the others!'
             );
         
         } catch (error) {

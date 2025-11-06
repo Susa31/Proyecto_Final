@@ -132,7 +132,21 @@ const ViewProfile = ({ route, navigation }) => {
 
       <View style={styles.buttonContainer}>
         {isMyProfile ? (
-            <Button mode="outlined" disabled>This is your profile</Button>
+            <Button
+              mode="contained"
+              icon="plus"
+              onPress={() => 
+                navigation.navigate('PublishPost', { 
+                  user: profile,
+                  onPublish: () => {
+                    navigation.navigate('Feed', { user: profile });
+                  }
+                })
+              }
+            >
+              New Post
+            </Button>
+      
         ) : (
             <Button
               mode={isFollowing ? 'outlined' : 'contained'}

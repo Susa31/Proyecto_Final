@@ -3,7 +3,7 @@ import { View, FlatList, Text, TouchableOpacity, ActivityIndicator, Alert, Style
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card, Button } from 'react-native-paper';
 import ZHeader from '../Components/ZHeader'; 
-import { getFeedTweets } from '../config/firebaseService';
+import { listenToFeedTweets } from '../config/firebaseService';
 
 const Feed = ({ navigation, route }) => {
   const { user } = route.params; 
@@ -13,26 +13,16 @@ const Feed = ({ navigation, route }) => {
   const MAX_POSTS_PAGE = 10;
 
   useEffect(() => {
-    const loadFeed = async () => {
-        setLoading(true);
-        try {
-            const feedPosts = await getFeedTweets(user.id); 
-            setPosts(feedPosts); 
-        } catch (error) {
-            console.error("Error while loading the Feed: ", error);
-            if (error.code === 'firestore/failed-precondition') {
-                Alert.alert(
-                    "Database Error", 
-                    "Your app needs a database index, please check the debug console for more details"
-                ); 
-            } else {
-                Alert.alert("Error", "Could not load the Feed");
-            }
-        } finally {
-            setLoading(false);
-        }
+    const unsubscribe = listenToFeedTweets(user.id, (updatedPosts) => {
+      setPosts(updatedPosts);
+      setLoading(false);
+    });
+  
+    return () => {
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
     };
-    loadFeed();
   }, [user.id]);
   
   const start = (page - 1) * MAX_POSTS_PAGE;

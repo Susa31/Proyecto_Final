@@ -1,7 +1,8 @@
-import React, { useEffect } from "react"; 
+import React, { useEffect } from "react";
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { PaperProvider } from "react-native-paper";
+
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import Login from './src/Screens/Login';
 import Register from './src/Screens/Register';
@@ -15,11 +16,13 @@ import Search from './src/Screens/Search';
 const Stack = createNativeStackNavigator();
 
 export default function App() {
+
   useEffect(() => {
     GoogleSignin.configure({
-      webClientId: '839871506287-mjcbsc82g58q4lpoa8qk10f1t3tiir4s.apps.googleusercontent.com', 
+
+      webClientId: 'TU_WEB_CLIENT_ID.apps.googleusercontent.com', 
     });
-  }, []); 
+  }, []);
   
   return (
     <PaperProvider>
@@ -43,33 +46,33 @@ export default function App() {
           <Stack.Screen
             name="PublishPost"
             component={PublishPost}
-            options={{ headerShown: false }}
+            options={{ title: 'Publish a Post' }}
           />
           <Stack.Screen
             name="ViewPost"
             component={ViewPost}
             options={{ title: 'Post' }}
           />
-           <Stack.Screen
-             name="ViewProfile"
-             component={ViewProfile}
-             options={{ title: 'Profile' }}
-           />
-           <Stack.Screen
-             name="FollowersList"
-             component={FollowersList}
-             options={{ title: 'Followers' }}
-           />
-            <Stack.Screen
-               name="FollowingList"
-               component={FollowingList}
-               options={{ title: 'Following' }}
-             />
-            <Stack.Screen
-               name="Search"
-               component={Search}
-               options={{ title: 'Search User' }}
-             />
+          <Stack.Screen
+            name="ViewProfile"
+            component={ViewProfile}
+            options={{ title: 'Profile' }}
+          />
+          <Stack.Screen
+            name="FollowersList"
+            component={FollowersList}
+            options={{ title: 'Followers' }}
+          />
+          <Stack.Screen
+            name="FollowingList"
+            component={FollowingList}
+            options={{ title: 'Following' }}
+          />
+          <Stack.Screen
+            name="Search"
+            component={Search}
+            options={{ title: 'Search User' }}
+          />
 
         </Stack.Navigator>
       </NavigationContainer>

@@ -14,14 +14,13 @@ const Search = ({ route, navigation }) => {
         const usersList = [];
         const querySnapshot = await firestore().collection('users').get();
         querySnapshot.forEach(doc => {
-          // No me muestro a mí mismo en la lista
           if (doc.id !== currentUser.id) { 
             usersList.push({ id: doc.id, ...doc.data() });
           }
         });
         setUsers(usersList);
       } catch (e) {
-        console.error("Error al buscar usuarios: ", e);
+        console.error("Error when looking for users: ", e);
       } finally {
         setLoading(false);
       }
@@ -32,7 +31,6 @@ const Search = ({ route, navigation }) => {
   const renderItem = ({ item }) => {
     return (
       <TouchableOpacity
-        // ¡Pasa los IDs que la pantalla de perfil ahora espera!
         onPress={() => navigation.navigate('ViewProfile', { 
             profileId: item.id, 
             currentUserId: currentUser.id 
@@ -71,7 +69,7 @@ const Search = ({ route, navigation }) => {
         keyExtractor={item => item.id}
         ListEmptyComponent={
           <Text style={styles.emptyText}>
-            No se encontraron usuarios.
+            Could not find users.
           </Text>
         }
       />

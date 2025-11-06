@@ -1,4 +1,3 @@
-// src/config/firebaseService.js
 import { auth, firestore } from './firebase'; 
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
@@ -209,10 +208,10 @@ export const followUser = async (myId, theirId) => {
         batch.update(myUserRef, { followingCount: firestore.FieldValue.increment(1) });
 
         await batch.commit();
-        console.log(`Éxito: ${myId} ahora sigue a ${theirId}`);
+        console.log(`Success: ${myId} now follows ${theirId}`);
 
     } catch (error) {
-        console.error("Error al seguir usuario: ", error);
+        console.error("Error when following user: ", error);
         throw error;
     }
 };

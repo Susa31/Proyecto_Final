@@ -4,13 +4,11 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { PaperProvider } from "react-native-paper";
 
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
-
 import Login from './src/Screens/Login';
 import Register from './src/Screens/Register';
 import PublishPost from './src/Screens/PublishPost';
 import Feed from './src/Screens/Feed';
 import ViewPost from './src/Screens/ViewPost';
-import ViewProfile from './src/Screens/ViewProfile';
 import FollowersList from './src/Screens/FollowersList';
 import FollowingList from './src/Screens/FollowingList';
 import Search from './src/Screens/Search'; 
@@ -80,4 +78,4 @@ export default function App() {
       </NavigationContainer>
     </PaperProvider>
   );
-}
+}//Closes App

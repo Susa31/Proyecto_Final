@@ -36,13 +36,17 @@ const PublishPost = ({ navigation, route }) => {
             const publishedPost = await publishTweet(newPostData);
 
             if (route.params?.onPublish) {
-                route.params.onPublish();
+                route.params.onPublish(publishedPost);
             }
             
             Alert.alert(
                 'Published',
-                'Your Post has been shared with the others!'
+                'Your Post has been shared with others!',
+                [
+                    { text: "OK", onPress: () => navigation.replace('Feed', { user: user })}
+                ]
             );
+            setIsLoading(false);
         
         } catch (error) {
             console.error("Error when publishing: ", error);

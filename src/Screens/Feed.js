@@ -12,18 +12,19 @@ const Feed = ({ navigation, route }) => {
   const [page, setPage] = useState(1); 
   const MAX_POSTS_PAGE = 10;
 
-  useEffect(() => {
-    const unsubscribe = listenToFeedTweets(user.id, (updatedPosts) => {
-      setPosts(updatedPosts);
-      setLoading(false);
-    });
-  
-    return () => {
-      if (typeof unsubscribe === 'function') {
-        unsubscribe();
-      }
-    };
-  }, [user.id]);
+useEffect(() => {
+    const unsubscribe = listenToFeedTweets(user.id, (updatedPosts) => {
+      const filteredPosts = updatedPosts.filter(post => post && post.id); 
+      setPosts(filteredPosts);
+      setLoading(false);
+    });
+  
+    return () => {
+      if (typeof unsubscribe === 'function') {
+        unsubscribe();
+      }
+    };
+  }, [user.id]);
   
   const start = (page - 1) * MAX_POSTS_PAGE;
   const end = start + MAX_POSTS_PAGE;
@@ -35,25 +36,31 @@ const Feed = ({ navigation, route }) => {
     );
   };
 
-  const renderItem = ({ item }) => (
-    <TouchableOpacity
-      onPress={() => navigation.navigate('ViewPost', { post: item, user: user, updatePost })}
-    >
-      <Card style={styles.card}>
-        <Card.Content>
-          <View style={styles.postHeader}>
-            <Text style={styles.postNames}>{item.authorNameFull} @{item.authorNameUser}</Text>
-            <Text style={styles.postDate}>{item.createdAt}</Text>
-          </View>
-          <Text style={styles.postContent}>{item.text}</Text> 
-          <View style={styles.postActions}>
-              <Text style={styles.actionText}> {(item.likes || []).length} Likes</Text>
-              <Text style={styles.actionText}> {(item.comments || []).length} Comments</Text>
-            </View>
-        </Card.Content>
-      </Card>
-    </TouchableOpacity>
-  ); 
+  const renderItem = ({ item }) => {
+    if (!item) {
+      return null;
+    }
+
+    return ( 
+      <TouchableOpacity
+        onPress={() => navigation.navigate('ViewPost', { post: item, user: user, updatePost })}
+      >
+        <Card style={styles.card}>
+          <Card.Content>
+            <View style={styles.postHeader}>
+              <Text style={styles.postNames}>{`${item.authorNameFull} @${item.authorNameUser}`}</Text>
+              <Text style={styles.postDate}>{item.createdAt}</Text>
+            </View>
+            <Text style={styles.postContent}>{item.text}</Text> 
+            <View style={styles.postActions}>
+                <Text style={styles.actionText}> {(item.likes || []).length} Likes</Text>
+                <Text style={styles.actionText}> {(item.comments || []).length} Comments</Text>
+              </View>
+          </Card.Content>
+        </Card>
+      </TouchableOpacity>
+    ); 
+  };
 
   const listIfEmpty = (
     <View style={styles.emptyContainer}>
@@ -67,6 +74,7 @@ const Feed = ({ navigation, route }) => {
         <Button
           mode="contained"
           buttonColor="#8A2BE2"
+          icon="plus"
           onPress={() =>
             navigation.navigate('PublishPost', {
               user: user, 
@@ -108,7 +116,7 @@ const Feed = ({ navigation, route }) => {
         <FlatList
           data={visiblePosts}
           renderItem={renderItem}
-          keyExtractor={item => item.id}
+          keyExtractor={(item, index) => (item ? item.id.toString() : index.toString())}
           ListEmptyComponent={listIfEmpty}
           ListFooterComponent={listFooter}
         />
@@ -126,20 +134,26 @@ const styles = StyleSheet.create({
         marginVertical: 8,
         marginHorizontal: 10,
         elevation: 1,
+        paddingTop: 10,
+        paddingBottom: 10
     },
     postHeader: {
         flexDirection: 'row',
         justifyContent: 'space-between',
         marginBottom: 8,
+        alignItems: 'baseline'
     },
     postNames: {
         fontWeight: 'bold',
-        fontSize: 16,
+        fontSize: 15,
+        marginRight: 8,
+        flex: 1,
     },
     postDate: {
         color: 'gray',
-        fontSize: 12,
-        alignSelf: 'center'
+        fontSize: 11,
+        alignSelf: 'center',
+        flexShrink: 0,
     },
     postContent: {
         fontSize: 15,
@@ -152,6 +166,7 @@ const styles = StyleSheet.create({
         borderTopWidth: 1,
         borderTopColor: '#eee',
         paddingTop: 10,
+        paddingBottom: 5
     },
     actionText: {
         color: '#555'

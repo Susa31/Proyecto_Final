@@ -201,7 +201,9 @@ const ViewProfile = ({ route, navigation }) => {
               onPress={handleFollow}
               loading={loadingFollow}
               disabled={loadingFollow}
-              color={isFollowing ? '#888' : '#6200EE'}
+              buttonColor={isFollowing ? 'white' : '#8A2BE2'}
+              textColor={isFollowing ? '#8A2BE2' : 'white'}
+              theme={{ colors: { outline: "#8A2BE2" } }}
             >
               {isFollowing ? 'Following' : 'Follow'}
             </Button>
@@ -243,7 +245,8 @@ const styles = StyleSheet.create({
     padding: 20, 
   },
   avatar: { 
-    marginBottom: 10, 
+    marginBottom: 10,
+    backgroundColor: '#8A2BE2',
   },
   uploadingOverlay: {
       ...StyleSheet.absoluteFillObject, 

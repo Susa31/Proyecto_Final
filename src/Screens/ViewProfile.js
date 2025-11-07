@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
-import { Card, Avatar, Divider, Text, Button, ActivityIndicator } from 'react-native-paper';
-import { checkIfFollowing, followUser, unfollowUser } from '../config/firebaseService';
+import { Card, Avatar, Divider, Text, TextInput, Button, ActivityIndicator } from 'react-native-paper';
+import { checkIfFollowing, followUser, unfollowUser, updateUserDescription } from '../config/firebaseService';
 import { firestore } from '../config/firebase';
 
 const ViewProfile = ({ route, navigation }) => {
@@ -11,6 +11,9 @@ const ViewProfile = ({ route, navigation }) => {
   const [isFollowing, setIsFollowing] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [loadingFollow, setLoadingFollow] = useState(false);
+  const [editingDescription, setEditingDescription] = useState(false);
+  const [newDescription, setNewDescription] = useState('');
+  const [savingDescription, setSavingDescription] = useState(false);
 
   useEffect(() => {
     setLoadingProfile(true);
@@ -20,9 +23,11 @@ const ViewProfile = ({ route, navigation }) => {
       .onSnapshot(
         (documentSnapshot) => {
           if (documentSnapshot.exists) {
-            setProfile({ id: documentSnapshot.id, ...documentSnapshot.data() });
+            const data = documentSnapshot.data();
+            setProfile({ id: documentSnapshot.id, ...data });
+            setNewDescription(data.description || '');
           } else {
-            console.error("Can  not found profile with ID: ", profileId);
+            console.error("Cannot find profile with ID: ", profileId);
             setProfile(null);
           }
           setLoadingProfile(false);
@@ -32,8 +37,8 @@ const ViewProfile = ({ route, navigation }) => {
           setLoadingProfile(false);
         }
       );
-
-    return () => unsubscribe(); 
+  
+    return () => unsubscribe();
   }, [profileId]);
 
   useEffect(() => {
@@ -139,13 +144,15 @@ const ViewProfile = ({ route, navigation }) => {
                 navigation.navigate('PublishPost', { 
                   user: profile,
                   onPublish: () => {
-                    navigation.navigate('Feed', { user: profile });
+                    navigation.replace('Feed', { user: profile });
                   }
                 })
               }
             >
               New Post
             </Button>
+
+
       
         ) : (
             <Button
@@ -160,23 +167,62 @@ const ViewProfile = ({ route, navigation }) => {
         )}
       </View>
 
-      {profile.description ? (
-        <Card style={styles.profileCard}>
-          <Card.Content>
-            <Text style={styles.sectionTitle}>About me</Text>
-            <Divider style={styles.divider} />
-            <Text style={styles.biography}>{profile.description}</Text>
-          </Card.Content>
-        </Card>
-      ) : (
-        <Card style={styles.profileCard}>
-          <Card.Content>
-            <Text style={styles.sectionTitle}>About me</Text>
-            <Divider style={styles.divider} />
-            <Text>Hello there! I am using this app :D</Text>
-          </Card.Content>
-        </Card>
-      )}
+      <Card style={styles.profileCard}>
+        <Card.Content>
+          <Text style={styles.sectionTitle}>About me</Text>
+          <Divider style={styles.divider} />
+
+          {isMyProfile && editingDescription ? (
+            <View>
+              <TextInput
+                value={newDescription}
+                onChangeText={setNewDescription}
+                multiline
+                style={styles.input}
+                placeholder="Write something about yourself..."
+              />
+              <Button
+                mode="contained"
+                loading={savingDescription}
+                disabled={savingDescription}
+                onPress={async () => {
+                  setSavingDescription(true);
+                  try {
+                    await updateUserDescription(profile.id, newDescription);
+                    setEditingDescription(false);
+                  } catch (error) {
+                    console.error("Failed to update description", error);
+                  } finally {
+                    setSavingDescription(false);
+                  }
+                }}
+              >
+                Save
+              </Button>
+              <Button
+                mode="text"
+                onPress={() => setEditingDescription(false)}
+              >
+                Cancel
+              </Button>
+            </View>
+          ) : (
+            <View>
+              <Text style={styles.biography}>
+                {profile.description || "Hello there! I am using this app :D"}
+              </Text>
+              {isMyProfile && (
+                <Button
+                  mode="text"
+                  onPress={() => setEditingDescription(true)}
+                >
+                  Edit
+                </Button>
+              )}
+            </View>
+          )}
+        </Card.Content>
+      </Card>
     </ScrollView>
   );
 }; 
@@ -238,7 +284,15 @@ const styles = StyleSheet.create({
   },
   biography: { 
     fontSize: 16, 
-  }
+  },
+  input: {
+    fontSize: 16,
+    borderColor: '#ccc',
+    borderWidth: 1,
+    borderRadius: 6,
+    padding: 10,
+    marginBottom: 10,
+  },
 });
 
 export default ViewProfile;

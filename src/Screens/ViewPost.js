@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, Alert, StyleSheet, Image } from 'react-native';
+import { View, ScrollView, Alert, StyleSheet, Image, TouchableOpacity } from 'react-native';
 import { Card, Text, Button, TextInput } from 'react-native-paper';
-import { firestore } from '../config/firebase'; 
+import { auth, firestore } from '../config/firebase'; 
 import { updateTweetLikes, addCommentToTweet } from '../config/firebaseService';
 
-const ViewPost = ({ route }) => {
+const ViewPost = ({ route, navigation }) => {
     const { post, user, updatePost } = route.params; 
     const [ currentPost, setCurrentPost ] = useState(post);
     const [ newComment, setNewComment ] = useState('');
@@ -56,6 +56,7 @@ const ViewPost = ({ route }) => {
             id: Date.now().toString(),
             fullname: user.nameFull, 
             username: user.nameUser, 
+            authorId: user.id,
             text: trimmed,
             createdAt: new Date(), 
         };
@@ -86,9 +87,14 @@ const ViewPost = ({ route }) => {
                 <Card style={styles.card}>
                     <Card.Content>
                         <View style={styles.postHeader}>
-                            <Text style={styles.postNames}>
-                                {currentPost.authorNameFull} @{currentPost.authorNameUser}
-                            </Text>
+                            <TouchableOpacity onPress={() => {
+                                navigation.navigate('ViewProfile', { 
+                                    profileId: currentPost.authorId,
+                                    currentUserId: user.id
+                                });
+                            }}>
+                                <Text style={styles.postNames}>{currentPost.authorNameFull} @{currentPost.authorNameUser}</Text>
+                            </TouchableOpacity>
                             <Text style={styles.postDate}>{currentPost.createdAt}</Text>
                         </View>
                         {currentPost.text ? (
@@ -156,9 +162,14 @@ const ViewPost = ({ route }) => {
                         <Card key={comment.id} style={styles.commentCard}>
                             <Card.Content>
                                 <View style={styles.postHeader}>
-                                    <Text style={styles.commentAuthor}>
-                                        {comment.fullname} @{comment.username}
-                                    </Text>
+                                    <TouchableOpacity onPress={() => {
+                                        navigation.navigate('ViewProfile', { 
+                                            profileId: comment.authorId,
+                                            currentUserId: user.id
+                                        });
+                                    }}>
+                                        <Text style={styles.commentAuthor}>{comment.fullname} @{comment.username}</Text>
+                                    </TouchableOpacity>
                                     <Text style={styles.commentDate}>
                                         {comment.createdAt?.toString() || ''}
                                     </Text>

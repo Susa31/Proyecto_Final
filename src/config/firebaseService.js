@@ -258,6 +258,17 @@ export const updateTweetLikes = async (tweetId, likesArray) => {
     }
 };
 
+export const updateUserDescription = async (userId, newDescription) => {
+    try {
+      const userRef = firestore().collection(USER_COLLECTION).doc(userId);
+      await userRef.update({ description: newDescription.trim() });
+      console.log(`Description updated for user: ${userId}`);
+    } catch (error) {
+      console.error("Error updating user description:", error);
+      throw error;
+    }
+  };
+
 export const addCommentToTweet = async (tweetId, commentObject) => {
     try {
         const tweetRef = firestore().collection(TWEET_COLLECTION).doc(tweetId);
@@ -269,6 +280,18 @@ export const addCommentToTweet = async (tweetId, commentObject) => {
         console.error("Error when adding the comment: ", error);
         throw error;
     }
+};
+
+export const updateUserDescription = async (userId, newDescription) => {
+    try {
+      const userRef = firestore().collection(USER_COLLECTION).doc(userId);
+      await userRef.update({ description: newDescription.trim() });
+      console.log(`Description updated for user: ${userId}`);
+    } catch (error) {
+      console.error("Error updating user description:", error);
+      throw error;
+    }
+  };
 };
 /**
  *
@@ -285,3 +308,4 @@ export const updateUserProfile = async (userId, dataToUpdate) => {
         throw error;
     }
 };
+

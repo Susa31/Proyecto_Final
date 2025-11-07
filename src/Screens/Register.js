@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, Alert, Image, KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
-import { Card, TextInput, Text, Button, HelperText } from 'react-native-paper';
-import {registerService} from "../config/firebaseService";
+import { View, ScrollView, Alert, TouchableOpacity, KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
+import { Card, TextInput, Text, Button, HelperText, Avatar, ActivityIndicator } from 'react-native-paper';
+import { registerService } from "../config/firebaseService";
+import { uploadImageToCloudinary } from "../config/imageService";
+import { launchImageLibrary } from 'react-native-image-picker';
+
 
 const Register = ({ navigation }) => {
     const [nameFull, setNameFull] = useState('');
@@ -11,8 +14,11 @@ const Register = ({ navigation }) => {
     const [confirmPassword, setConfirmPassword] = useState('');
     const [emailError, setEmailError] = useState('');
     const [passwordError, setPasswordError] = useState('');
-    const [nameUserError, setNameUserError] = useState('');     
+    const [nameUserError, setNameUserError] = useState(''); 
     const [isFormValid, setIsFormValid] = useState(false);
+    
+    const [imageUri, setImageUri] = useState(null); 
+    const [isLoading, setIsLoading] = useState(false); 
 
     useEffect(() => {
         const emailRegex = /^[^\s@]+@[^\s@]+\.(com|co)$/;
@@ -29,7 +35,7 @@ const Register = ({ navigation }) => {
         } else {
             setPasswordError('');
         }
-
+        
         const areFieldsFilled = nameFull.trim() !== '' &&
                                 nameUser.trim() !== '' &&
                                 email.trim() !== '' &&
@@ -50,30 +56,50 @@ const Register = ({ navigation }) => {
         }
     }, [nameUser]);
 
+    const handleSelectImage = () => {
+        launchImageLibrary(
+            { mediaType: 'photo', quality: 0.7 }, 
+            (response) => {
+                if (response.didCancel) {
+                    console.log('User has cancelled image selection');
+                } else if (response.errorCode) {
+                    console.log('ImagePicker Error: ', response.errorMessage);
+                } else {
+                    const uri = response.assets[0].uri;
+                    setImageUri(uri);
+                }
+            }
+        );
+    };
+
     const handleSave = async () => {
         if (!isFormValid) {
             Alert.alert('Error', 'All fields are required');
             return;
         }
 
+        setIsLoading(true); 
+
         const profileData = { 
             nameFull: nameFull.trim(), 
             nameUser: nameUser.trim(),
-            email: email.trim()
+            email: email.trim(),
+            avatarUrl: null,
         };
 
         try {
+            if (imageUri) {
+                console.log("Uploading avatar to Cloudinary...");
+                const avatarUrl = await uploadImageToCloudinary(imageUri);
+                profileData.avatarUrl = avatarUrl;
+            }
+
             await registerService(email.trim(), password, profileData);
             
             Alert.alert(
                 'Created Account',
                 'Successfully created account',
-                [
-                    { 
-                        text: 'OK', 
-                        onPress: () => navigation.navigate('Login') 
-                    }
-                ]
+                [ { text: 'OK', onPress: () => navigation.navigate('Login') } ]
             );
 
         } catch (error) {
@@ -90,6 +116,8 @@ const Register = ({ navigation }) => {
             } else {
                 Alert.alert('Error', 'An error occurred. Please try again.');
             }
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -97,13 +125,16 @@ const Register = ({ navigation }) => {
         <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.container}>
             <ScrollView contentContainerStyle={styles.scrollContainer}>
                 <View style={styles.headerContainer}>
-                    <Image
-                        source={require('../Assets/zentroLogo.png')}
-                        style={styles.profileImage}
-                        onError={(e) => console.log('Error loading image', e.nativeEvent.error)} 
-                    />
+                    <TouchableOpacity onPress={handleSelectImage}>
+                        {imageUri ? (
+                            <Avatar.Image size={100} source={{ uri: imageUri }} style={styles.avatar} />
+                        ) : (
+                            <Avatar.Icon size={100} icon="camera-plus" style={styles.avatar} />
+                        )}
+                    </TouchableOpacity>
                     <Text style={styles.title}>Create a profile</Text>
                 </View>
+                
                 <Card>
                     <Card.Content>
                         <TextInput 
@@ -114,7 +145,7 @@ const Register = ({ navigation }) => {
                             left={<TextInput.Icon icon="account" />} 
                             mode='outlined' 
                         />
-    
+            
                         <TextInput 
                             label='* Username' 
                             value={nameUser} 
@@ -152,19 +183,23 @@ const Register = ({ navigation }) => {
                             <Text style={styles.infoText}>* Required fields</Text>
                         </View>
 
-                        <Button
-                            mode='contained' onPress={handleSave} style={styles.button}
-                            icon="account-plus" disabled={!isFormValid}
-                        >
-                            Create Account
-                        </Button>
+                        {isLoading ? (
+                            <ActivityIndicator size="large" style={{ marginVertical: 10 }} />
+                        ) : (
+                            <Button
+                                mode='contained' onPress={handleSave} style={styles.button}
+                                icon="account-plus" disabled={!isFormValid}
+                            >
+                                Create Account
+                            </Button>
+                        )}
+
                     </Card.Content>
                 </Card>
             </ScrollView>
         </KeyboardAvoidingView>
     );
 };//Closes Register
-
 
 const styles = StyleSheet.create({
     container: {
@@ -179,7 +214,11 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         marginBottom: 16,
     },
-    profileImage: {
+    avatar: {
+        marginBottom: 12,
+        backgroundColor: '#e0e0e0' 
+    },
+    profileImage: { //Not used anymore
         width: 100,
         height: 100,
         borderRadius: 50,

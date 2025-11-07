@@ -4,7 +4,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { auth } from '../config/firebase'; 
 import { Appbar, Avatar } from 'react-native-paper'; 
 
-const ZHeader = ({ user, navigation }) => {
+const ZHeader = ({ user, navigation, avatarUrl, onAvatarUpdate }) => {
   const handleLogout = async () => {
     try {
       await auth().signOut(); 
@@ -22,7 +22,8 @@ const ZHeader = ({ user, navigation }) => {
     if (user) {
       navigation.navigate('ViewProfile', { 
           profileId: user.id, 
-          currentUserId: user.id 
+          currentUserId: user.id,
+          onAvatarUpdate: onAvatarUpdate 
         });
     }
   };
@@ -42,14 +43,15 @@ const ZHeader = ({ user, navigation }) => {
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <TouchableOpacity onPress={handleGoToProfile} style={styles.avatarWrapper}>
-          {user && user.avatarUrl ? (
+          {user && (user.avatarUrl || user.avatarUrl) ? (
             <Avatar.Image
-              size={40}
-              source={{ uri: user.avatarUrl }}
+              size={50}
+              source={{ uri: avatarUrl || user.avatarUrl }}
+              key={avatarUrl || user.avatarUrl} 
             />
           ) : (
             <Avatar.Text
-              size={40}
+              size={47}
               label={getInitials()}
               style={styles.avatarFallback}
             />
@@ -85,9 +87,9 @@ const styles = StyleSheet.create({
     height: 60,
   },
   avatarWrapper: {
-    width: 42, 
-    height: 42,
-    borderRadius: 21,
+    width: 52, 
+    height: 52,
+    borderRadius: 26,
     borderWidth: 1,
     borderColor: 'white',
     justifyContent: 'center',

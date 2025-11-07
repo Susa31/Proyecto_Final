@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { View, FlatList, Text, TouchableOpacity, ActivityIndicator, Alert, StyleSheet } from 'react-native';
+import { View, FlatList, Text, TouchableOpacity, ActivityIndicator, Alert, StyleSheet, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Card, Button } from 'react-native-paper';
 import ZHeader from '../Components/ZHeader'; 
-import { listenToFeedTweets } from '../config/firebaseService';
+import { getFeedTweets } from '../config/firebaseService';
 
 const Feed = ({ navigation, route }) => {
   const { user } = route.params; 
@@ -11,19 +11,39 @@ const Feed = ({ navigation, route }) => {
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1); 
   const MAX_POSTS_PAGE = 10;
+  const [currentUserAvatar, setCurrentUserAvatar] = useState(user.avatarUrl);
+  const onAvatarUpdate = (newAvatarUrl) => {
+    setCurrentUserAvatar(newAvatarUrl);
+  };
 
   useEffect(() => {
-    const unsubscribe = listenToFeedTweets(user.id, (updatedPosts) => {
-      setPosts(updatedPosts);
-      setLoading(false);
-    });
-  
-    return () => {
-      if (typeof unsubscribe === 'function') {
-        unsubscribe();
-      }
+    const loadFeed = async () => {
+        setLoading(true);
+        try {
+            console.log("Re-loading feed via focus event for user:", user.id);
+            const feedPosts = await getFeedTweets(user.id); 
+            setPosts(feedPosts); 
+        } catch (error) {
+            console.error("Error when loading Feed: ", error);
+            if (error.code === 'firestore/failed-precondition') {
+                Alert.alert(
+                    "Database Error", 
+                    "Your app requires a database index. Please check the debug console for more info"
+                );
+              } else {
+                Alert.alert("Error", "Could not load your Feed");
+              }
+          } finally {
+            setLoading(false);
+        }
     };
-  }, [user.id]);
+
+    loadFeed();
+
+    const unsubscribe = navigation.addListener('focus', loadFeed);
+
+    return unsubscribe; 
+  }, [user.id, navigation]);
   
   const start = (page - 1) * MAX_POSTS_PAGE;
   const end = start + MAX_POSTS_PAGE;
@@ -45,7 +65,14 @@ const Feed = ({ navigation, route }) => {
             <Text style={styles.postNames}>{item.authorNameFull} @{item.authorNameUser}</Text>
             <Text style={styles.postDate}>{item.createdAt}</Text>
           </View>
-          <Text style={styles.postContent}>{item.text}</Text> 
+          <Text style={styles.postContent}>{item.text}</Text>
+          {item.imageUrl && (
+            <Image 
+                source={{ uri: item.imageUrl }} 
+                style={styles.postImage} 
+                resizeMode="cover"
+            />
+          )} 
           <View style={styles.postActions}>
               <Text style={styles.actionText}> {(item.likes || []).length} Likes</Text>
               <Text style={styles.actionText}> {(item.comments || []).length} Comments</Text>
@@ -57,7 +84,7 @@ const Feed = ({ navigation, route }) => {
 
   const listIfEmpty = (
     <View style={styles.emptyContainer}>
-      <Text style={styles.emptyText}>Nothing to show yet. Follow someone or Post something!</Text>
+      <Text style={styles.emptyText}>Nothing to show, yet... Follow someone or publish something!</Text>
     </View>
   );
 
@@ -101,7 +128,12 @@ const Feed = ({ navigation, route }) => {
 
   return (
     <SafeAreaView style={styles.container}>
-      <ZHeader user={user} navigation={navigation} />
+      <ZHeader 
+        user={user} 
+        navigation={navigation} 
+        avatarUrl={currentUserAvatar}
+        onAvatarUpdate={onAvatarUpdate} 
+      />
       {loading ? (
         <ActivityIndicator style={{marginTop: 30}} size="large" />
       ) : (
@@ -144,6 +176,13 @@ const styles = StyleSheet.create({
     postContent: {
         fontSize: 15,
         lineHeight: 22,
+        marginBottom: 10,
+    },
+    postImage: {
+        width: '100%',
+        height: 250,
+        borderRadius: 8,
+        marginTop: 5,
     },
     postActions: {
         flexDirection: 'row',

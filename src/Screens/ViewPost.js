@@ -1,9 +1,5 @@
 import React, { useState, useEffect } from 'react';
-<<<<<<< Updated upstream
-import { View, ScrollView, Alert, StyleSheet, TouchableOpacity } from 'react-native';
-=======
 import { View, ScrollView, Alert, StyleSheet, Image, TouchableOpacity } from 'react-native';
->>>>>>> Stashed changes
 import { Card, Text, Button, TextInput } from 'react-native-paper';
 import { auth, firestore } from '../config/firebase'; 
 import { updateTweetLikes, addCommentToTweet } from '../config/firebaseService';
@@ -12,7 +8,6 @@ const ViewPost = ({ route, navigation }) => {
     const { post, user, updatePost } = route.params; 
     const [ currentPost, setCurrentPost ] = useState(post);
     const [ newComment, setNewComment ] = useState('');
-
     const [ isCommentValid, setIsCommentValid ] = useState(false);
     const [ commentCharCount, setCommentCharCount ] = useState(0);
 
@@ -45,7 +40,7 @@ const ViewPost = ({ route, navigation }) => {
         
         updateTweetLikes(currentPost.id, updatedLikes)
             .catch(err => {
-                console.error("Error when saving the Like: ", err);
+                console.error("Error when saving the like: ", err);
             });
     };
 
@@ -54,7 +49,7 @@ const ViewPost = ({ route, navigation }) => {
             Alert.alert("Invalid Comment", "Your comment cannot be empty and must be under 280 characters.");
             return;
         }
-
+        
         const trimmed = newComment.trim();
         
         const comment = {
@@ -102,8 +97,17 @@ const ViewPost = ({ route, navigation }) => {
                             </TouchableOpacity>
                             <Text style={styles.postDate}>{currentPost.createdAt}</Text>
                         </View>
+                        {currentPost.text ? (
+                            <Text style={styles.postContent}>{currentPost.text}</Text>
+                        ) : null}
 
-                        <Text style={styles.postContent}>{currentPost.text}</Text>
+                        {currentPost.imageUrl && (
+                            <Image 
+                                source={{ uri: currentPost.imageUrl }} 
+                                style={styles.postImageDetail}
+                                resizeMode="cover"
+                            />
+                        )}
 
                         <View style={styles.postActions}>
                             <Button
@@ -158,11 +162,7 @@ const ViewPost = ({ route, navigation }) => {
                         <Card key={comment.id} style={styles.commentCard}>
                             <Card.Content>
                                 <View style={styles.postHeader}>
-<<<<<<< Updated upstream
                                     <TouchableOpacity onPress={() => {
-=======
-                                <TouchableOpacity onPress={() => {
->>>>>>> Stashed changes
                                         navigation.navigate('ViewProfile', { 
                                             profileId: comment.authorId,
                                             currentUserId: user.id
@@ -213,6 +213,12 @@ const styles = StyleSheet.create({
         marginTop: 10,
         fontSize: 18, 
         lineHeight: 26,
+    },
+    postImageDetail: {
+        width: '100%',
+        height: 350, 
+        borderRadius: 8,
+        marginTop: 15,
     },
     postActions: {
         flexDirection: 'row',

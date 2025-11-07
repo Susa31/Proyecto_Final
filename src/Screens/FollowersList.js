@@ -76,7 +76,7 @@ const FollowersList = ({ route, navigation }) => {
                 {...props}
                 label={`${item.nameFull?.[0] || ''}`.toUpperCase()}
                 size={48}
-                style={{ backgroundColor: '#7C4DFF' }}
+                style={{ backgroundColor: '#8A2BE2' }}
                 color='#FFFFFF'
               />
             )

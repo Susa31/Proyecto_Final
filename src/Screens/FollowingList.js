@@ -74,7 +74,7 @@ const FollowingList = ({ route, navigation }) => {
                 {...props}
                 label={`${item.nameFull?.[0] || ''}`.toUpperCase()}
                 size={48}
-                style={{ backgroundColor: '#7C4DFF' }}
+                style={{ backgroundColor: '#8A2BE2' }}
                 color='#FFFFFF'
               />
             )
@@ -123,7 +123,7 @@ const styles = StyleSheet.create({
   divider: { height: 1, backgroundColor: '#eee', },
   paginationContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: 15, borderTopWidth: 1, borderColor: '#eee', },
   paginationText: { fontSize: 16, color: '#333', },
-  emptyText: { textAlign: 'center', marginTop: 20, color: '#4A148C' }
+  emptyText: { textAlign: 'center', marginTop: 20, color: '#8A2BE2' }
 });
 
 export default FollowingList;

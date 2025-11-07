@@ -1,29 +1,18 @@
 import React, { useState, useEffect } from 'react';
-<<<<<<< Updated upstream
-import { View, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
-import { Card, Avatar, Divider, Text, TextInput, Button, ActivityIndicator } from 'react-native-paper';
-import { checkIfFollowing, followUser, unfollowUser, updateUserDescription } from '../config/firebaseService';
-import { firestore } from '../config/firebase';
-=======
 import { View, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native';
 import { Card, Avatar, Divider, Text, Button, TextInput, ActivityIndicator } from 'react-native-paper';
 import { checkIfFollowing, followUser, unfollowUser, updateUserProfile, updateUserDescription } from '../config/firebaseService';
 import { firestore } from '../config/firebase'; 
 import { launchImageLibrary } from 'react-native-image-picker';
 import { uploadImageToCloudinary } from '../config/imageService';
->>>>>>> Stashed changes
 
 const ViewProfile = ({ route, navigation }) => {
-  const { profileId, currentUserId } = route.params; 
-
+  const { profileId, currentUserId, onAvatarUpdate } = route.params; 
   const [profile, setProfile] = useState(null); 
   const [isFollowing, setIsFollowing] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [loadingFollow, setLoadingFollow] = useState(false);
-<<<<<<< Updated upstream
-=======
   const [isUploading, setIsUploading] = useState(false); 
->>>>>>> Stashed changes
   const [editingDescription, setEditingDescription] = useState(false);
   const [newDescription, setNewDescription] = useState('');
   const [savingDescription, setSavingDescription] = useState(false);
@@ -40,39 +29,37 @@ const ViewProfile = ({ route, navigation }) => {
             setProfile({ id: documentSnapshot.id, ...data });
             setNewDescription(data.description || '');
           } else {
-            console.error("Cannot find profile with ID: ", profileId);
+            console.error("Could not find the profile with the ID: ", profileId);
             setProfile(null);
           }
           setLoadingProfile(false);
         },
         (error) => {
-          console.error("Error listening to the profile", error);
+          console.error("Error fetching profile data: ", error);
           setLoadingProfile(false);
         }
       );
-  
-    return () => unsubscribe();
-  }, [profileId]);
+    return () => unsubscribe(); 
+  }, [profileId]); 
 
   useEffect(() => {
     if (!profile || !currentUserId || profile.id === currentUserId) {
       setIsFollowing(false);
       return; 
     }
-
     setLoadingFollow(true);
     const checkFollow = async () => {
       try {
         const following = await checkIfFollowing(currentUserId, profile.id);
         setIsFollowing(following);
       } catch (error) {
-        console.error("Error while verifying 'follow': ", error);
+        console.error("Error verifying follow status: ", error);
       } finally {
         setLoadingFollow(false);
       }
     };
     checkFollow();
-  }, [profile, currentUserId]);
+  }, [profile, currentUserId]); 
 
   const handleFollow = async () => {
     setLoadingFollow(true);
@@ -83,11 +70,55 @@ const ViewProfile = ({ route, navigation }) => {
         await followUser(currentUserId, profile.id);
       }
     } catch (error) {
-      console.error("Error following/stop following: ", error);
-      setLoadingFollow(false);
+      console.error("Error when following / unfollowing: ", error);
+      setLoadingFollow(false); 
     }
   };
 
+  const handleSelectImage = () => {
+    if (isUploading) return; 
+
+    launchImageLibrary(
+        { mediaType: 'photo', quality: 0.7 }, 
+        async (response) => {
+            if (response.didCancel) {
+                console.log('User cancelled');
+                return;
+            }
+            if (response.errorCode) {
+                console.log('ImagePicker Error: ', response.errorMessage);
+                Alert.alert("Error", "Could not select the image");
+                return;
+            }
+
+            const uri = response.assets[0].uri;
+            if (!uri) return;
+            
+            setIsUploading(true);
+            
+            try {
+                console.log("Uploading new profile photo to Cloudinary...");
+                const avatarUrl = await uploadImageToCloudinary(uri);
+                
+                console.log("Uploading profile in Firestore...");
+                await updateUserProfile(currentUserId, { avatarUrl: avatarUrl });
+                
+                if (onAvatarUpdate) {
+                    onAvatarUpdate(avatarUrl);
+                }
+
+                console.log("Profile photo updated!");
+
+            } catch (error) {
+                console.error("Error when uploading the new profile photo: ", error);
+                Alert.alert("Error", "Could not update your profile photo");
+            } finally {
+                setIsUploading(false);
+            }
+        }
+    );
+  };
+  
   const getInitials = () => {
     try {
       if (!profile || !profile.nameFull) return '...';
@@ -102,26 +133,44 @@ const ViewProfile = ({ route, navigation }) => {
   if (loadingProfile) {
     return <ActivityIndicator style={{ marginTop: 50 }} size="large" />;
   }
-
   if (!profile) {
     return (
       <View style={styles.container}>
-        <Text style={styles.errorText}>Profile not found</Text>
-        <Button onPress={() => navigation.goBack()}>Go back</Button>
+        <Text style={styles.errorText}>Profile was not found</Text>
+        <Button onPress={() => navigation.goBack()}>Back</Button>
       </View>
     );
   }
-
+  
   const isMyProfile = currentUserId === profile.id;
 
   return (
     <ScrollView style={styles.container}>
       <View style={styles.profileHeader}>
-        {profile.avatarUrl ? (
-          <Avatar.Image size={100} source={{ uri: profile.avatarUrl }} style={styles.avatar} />
-        ) : (
-          <Avatar.Text size={100} label={getInitials()} style={styles.avatar} />
-        )}
+
+        <TouchableOpacity 
+          onPress={isMyProfile ? handleSelectImage : null}
+          disabled={!isMyProfile || isUploading}
+        >
+          <View>
+            {profile.avatarUrl ? (
+              <Avatar.Image size={100} source={{ uri: profile.avatarUrl }} style={styles.avatar} />
+            ) : (
+              <Avatar.Text size={100} label={getInitials()} style={styles.avatar} />
+            )}
+            {isUploading && (
+              <View style={styles.uploadingOverlay}>
+                <ActivityIndicator size="large" color="#FFFFFF" />
+              </View>
+            )}
+            {isMyProfile && !isUploading && (
+              <View style={styles.editIcon}>
+                <Avatar.Icon size={30} icon="pencil" style={{backgroundColor: '#999999'}} />
+              </View>
+            )}
+          </View>
+        </TouchableOpacity>
+        
         <Text style={styles.profileName}>{profile.nameFull}</Text>
         <Text style={styles.profileUsername}>@{profile.nameUser || profile.userName}</Text> 
       </View>
@@ -163,17 +212,16 @@ const ViewProfile = ({ route, navigation }) => {
               }
             >
               New Post
-            </Button>
-
-
-      
+            </Button>      
         ) : (
             <Button
               mode={isFollowing ? 'outlined' : 'contained'}
               onPress={handleFollow}
               loading={loadingFollow}
               disabled={loadingFollow}
-              color={isFollowing ? '#888' : '#6200EE'}
+              buttonColor={isFollowing ? 'white' : '#8A2BE2'}
+              textColor={isFollowing ? '#8A2BE2' : 'white'}
+              theme={{ colors: { outline: "#8A2BE2" } }}
             >
               {isFollowing ? 'Following' : 'Follow'}
             </Button>
@@ -238,7 +286,7 @@ const ViewProfile = ({ route, navigation }) => {
       </Card>
     </ScrollView>
   );
-}; 
+};//Closes ViewProfile
 
 const styles = StyleSheet.create({
   container: { 
@@ -254,7 +302,23 @@ const styles = StyleSheet.create({
     padding: 20, 
   },
   avatar: { 
-    marginBottom: 10, 
+    marginBottom: 10,
+    backgroundColor: '#8A2BE2',
+  },
+  uploadingOverlay: {
+      ...StyleSheet.absoluteFillObject, 
+      backgroundColor: 'rgba(0,0,0,0.4)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderRadius: 50,
+  },
+  editIcon: {
+      position: 'absolute',
+      bottom: 5,
+      right: -5,
+      backgroundColor: 'white',
+      borderRadius: 15,
+      padding: 2,
   },
   profileName: { 
     fontSize: 22, 
@@ -306,10 +370,7 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 10,
   },
-<<<<<<< Updated upstream
 });
-=======
-});//Closes Styles
->>>>>>> Stashed changes
+
 
 export default ViewProfile;

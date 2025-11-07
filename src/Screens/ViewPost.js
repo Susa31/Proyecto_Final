@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
+<<<<<<< Updated upstream
 import { View, ScrollView, Alert, StyleSheet, TouchableOpacity } from 'react-native';
+=======
+import { View, ScrollView, Alert, StyleSheet, Image, TouchableOpacity } from 'react-native';
+>>>>>>> Stashed changes
 import { Card, Text, Button, TextInput } from 'react-native-paper';
-import { firestore } from '../config/firebase'; 
+import { auth, firestore } from '../config/firebase'; 
 import { updateTweetLikes, addCommentToTweet } from '../config/firebaseService';
 
 const ViewPost = ({ route, navigation }) => {
@@ -154,7 +158,11 @@ const ViewPost = ({ route, navigation }) => {
                         <Card key={comment.id} style={styles.commentCard}>
                             <Card.Content>
                                 <View style={styles.postHeader}>
+<<<<<<< Updated upstream
                                     <TouchableOpacity onPress={() => {
+=======
+                                <TouchableOpacity onPress={() => {
+>>>>>>> Stashed changes
                                         navigation.navigate('ViewProfile', { 
                                             profileId: comment.authorId,
                                             currentUserId: user.id

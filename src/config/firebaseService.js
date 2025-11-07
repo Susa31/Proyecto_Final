@@ -293,4 +293,34 @@ export const addCommentToTweet = async (tweetId, commentObject) => {
         console.error("Error adding comment: ", error);
         throw error;
     }
+<<<<<<< Updated upstream
 };
+=======
+};
+
+export const updateUserDescription = async (userId, newDescription) => {
+    try {
+      const userRef = firestore().collection(USER_COLLECTION).doc(userId);
+      await userRef.update({ description: newDescription.trim() });
+      console.log(`Description updated for user: ${userId}`);
+    } catch (error) {
+      console.error("Error updating user description:", error);
+      throw error;
+    }
+  };
+/**
+ *
+ * @param {string} userId
+ * @param {object} dataToUpdate
+ */
+export const updateUserProfile = async (userId, dataToUpdate) => {
+    try {
+        const userRef = firestore().collection(USER_COLLECTION).doc(userId);
+        await userRef.update(dataToUpdate);
+        console.log("Profile updated in Firestore with the Cloudinary URL");
+    } catch (error) {
+        console.error("Error when updating the profile: ", error);
+        throw error;
+    }
+};
+>>>>>>> Stashed changes

@@ -1,8 +1,17 @@
 import React, { useState, useEffect } from 'react';
+<<<<<<< Updated upstream
 import { View, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { Card, Avatar, Divider, Text, TextInput, Button, ActivityIndicator } from 'react-native-paper';
 import { checkIfFollowing, followUser, unfollowUser, updateUserDescription } from '../config/firebaseService';
 import { firestore } from '../config/firebase';
+=======
+import { View, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native';
+import { Card, Avatar, Divider, Text, Button, TextInput, ActivityIndicator } from 'react-native-paper';
+import { checkIfFollowing, followUser, unfollowUser, updateUserProfile, updateUserDescription } from '../config/firebaseService';
+import { firestore } from '../config/firebase'; 
+import { launchImageLibrary } from 'react-native-image-picker';
+import { uploadImageToCloudinary } from '../config/imageService';
+>>>>>>> Stashed changes
 
 const ViewProfile = ({ route, navigation }) => {
   const { profileId, currentUserId } = route.params; 
@@ -11,6 +20,10 @@ const ViewProfile = ({ route, navigation }) => {
   const [isFollowing, setIsFollowing] = useState(false);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [loadingFollow, setLoadingFollow] = useState(false);
+<<<<<<< Updated upstream
+=======
+  const [isUploading, setIsUploading] = useState(false); 
+>>>>>>> Stashed changes
   const [editingDescription, setEditingDescription] = useState(false);
   const [newDescription, setNewDescription] = useState('');
   const [savingDescription, setSavingDescription] = useState(false);
@@ -293,6 +306,10 @@ const styles = StyleSheet.create({
     padding: 10,
     marginBottom: 10,
   },
+<<<<<<< Updated upstream
 });
+=======
+});//Closes Styles
+>>>>>>> Stashed changes
 
 export default ViewProfile;

@@ -2,7 +2,7 @@ import { auth, firestore } from './firebase';
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 const USER_COLLECTION = 'users';
-const TWEET_COLLECTION = 'Tweets'; 
+const TWEET_COLLECTION = 'Tweets';
 
 export const loginService = async (nameUser, password) => {
     try {
@@ -44,11 +44,12 @@ export const registerService = async (email, password, profileData) => {
             .collection(USER_COLLECTION)
             .doc(user.uid);
         const newProfileData = {
-            uid: user.uid, 
+            uid: user.uid,
             nameFull: profileData.nameFull,
             nameUser: profileData.nameUser.trim().toLowerCase(), 
             email: user.email, 
             createdAt: firestore.FieldValue.serverTimestamp(),
+            avatarUrl: profileData.avatarUrl || null,
             followersCount: 0, 
             followingCount: 0 
         };
@@ -69,7 +70,7 @@ export const signInWithGoogle = async () => {
     const user = userCredential.user; 
     
     if (userCredential.additionalUserInfo.isNewUser) {
-      console.log("New Google user, create a profile in Firestore...");
+      console.log("New Google user, creating profile in Firestore...");
       const userDocRef = firestore().collection(USER_COLLECTION).doc(user.uid);
       
       const newProfileData = {
@@ -77,7 +78,7 @@ export const signInWithGoogle = async () => {
         nameFull: user.displayName || 'Google User', 
         nameUser: (googleUser.givenName.toLowerCase() || 'user') + Math.floor(Math.random() * 10000), 
         email: user.email, 
-        avatarUrl: user.photoURL, 
+        avatarUrl: user.photoURL,
         createdAt: firestore.FieldValue.serverTimestamp(),
         followersCount: 0, 
         followingCount: 0 
@@ -87,22 +88,22 @@ export const signInWithGoogle = async () => {
       return { ...newProfileData, id: user.uid };
       
     } else {
-      console.log("UExisting Google user, searching for profile...");
+      console.log("Existing Google user, searching for profile...");
       const userDoc = await firestore().collection(USER_COLLECTION).doc(user.uid).get();
       
       if (!userDoc.exists) {
          const newProfileData = {
-           uid: user.uid, nameFull: user.displayName || 'Google User', 
+           uid: user.uid, nameFull: user.displayName || 'Google user', 
            nameUser: (googleUser.givenName.toLowerCase() || 'user') + Math.floor(Math.random() * 10000), 
            email: user.email, avatarUrl: user.photoURL, 
            createdAt: firestore.FieldValue.serverTimestamp(),
            followersCount: 0, followingCount: 0 
          };
          await firestore().collection(USER_COLLECTION).doc(user.uid).set(newProfileData);
-         return { ...newProfileData, id: user.uid }; 
+         return { ...newProfileData, id: user.uid };
       }
       
-      return { ...userDoc.data(), id: userDoc.id }; 
+      return { ...userDoc.data(), id: userDoc.id };
     }
   } catch (error) {
     console.error("Error in signInWithGoogle: ", error.code, error.message);
@@ -118,75 +119,61 @@ export const publishTweet = async (tweetData) => {
             authorNameFull: tweetData.fullname,
             authorNameUser: tweetData.username,
             createdAdd: firestore.FieldValue.serverTimestamp(),
+            imageUrl: tweetData.imageUrl || null,
             likes: [],
             comments: []
         };
         const docRef = await firestore()
             .collection(TWEET_COLLECTION)
             .add(dataToSave);
+        
         return { ...dataToSave, id: docRef.id };
     } catch (error) {
-        console.error("Error when posting: ", error);
+        console.error("Error when publishing Post: ", error);
         throw error;
     }
 };
 
-export const listenToFeedTweets = (myId, onUpdate) => {
-    const followingRef = firestore()
-      .collection(USER_COLLECTION)
-      .doc(myId)
-      .collection('following');
-  
-    return followingRef.onSnapshot(async (followingSnapshot) => {
-      const followingIds = followingSnapshot.docs.map(doc => doc.id);
-      const feedUserIds = [myId, ...followingIds];
-  
-      if (feedUserIds.length === 0) {
-        onUpdate([]);
-        return;
-      }
-  
-      const chunks = [];
-      while (feedUserIds.length > 0) {
-        chunks.push(feedUserIds.splice(0, 10));
-      }
-  
-      const allTweets = [];
-  
-      await Promise.all(chunks.map(async (chunk) => {
+export const getFeedTweets = async (myId) => {
+    try {
+        const followingSnapshot = await firestore()
+            .collection(USER_COLLECTION)
+            .doc(myId)
+            .collection('following')
+            .get();
+        
+        const followingIds = followingSnapshot.docs.map(doc => doc.id);
+        const feedUserIds = [myId, ...followingIds];
+
         const tweetsQuery = await firestore()
-          .collection(TWEET_COLLECTION)
-          .where('authorId', 'in', chunk)
-          .orderBy('createdAdd', 'desc')
-          .limit(100)
-          .get();
-  
-        tweetsQuery.docs.forEach(doc => {
-          const data = doc.data();
-  
-          const formattedComments = (data.comments || []).map(comment => {
+            .collection(TWEET_COLLECTION)
+            .where('authorId', 'in', feedUserIds.slice(0, 10)) 
+            .orderBy('createdAdd', 'desc') 
+            .limit(100)
+            .get();
+            
+        const tweets = tweetsQuery.docs.map(doc => {
+            const data = doc.data();
+            const formattedComments = (data.comments || []).map(comment => ({
+                ...comment,
+                createdAt: comment.createdAt?.toDate ? comment.createdAt.toDate().toLocaleString() : (comment.createdAt || '')
+            }));
+
             return {
-              ...comment,
-              createdAt: comment.createdAt?.toDate ? comment.createdAt.toDate().toLocaleString() : comment.createdAt
+                id: doc.id,
+                ...data,
+                comments: formattedComments,
+                createdAt: data.createdAdd?.toDate().toLocaleString() || new Date().toLocaleString()
             };
-          });
-  
-          allTweets.push({
-            id: doc.id,
-            ...data,
-            comments: formattedComments,
-            createdAt: data.createdAdd?.toDate().toLocaleString() || new Date().toLocaleString()
-          });
         });
-      }));
-  
-      const sortedTweets = allTweets.sort((a, b) => {
-        return new Date(b.createdAt) - new Date(a.createdAt);
-      });
-  
-      onUpdate(sortedTweets);
-    });
-  };
+        
+        return tweets;
+        
+    } catch (error) {
+        console.error("Error getting the Feed: ", error);
+        throw error;
+    }
+};
 
 export const followUser = async (myId, theirId) => {
     try {
@@ -253,7 +240,7 @@ export const checkIfFollowing = async (myId, theirId) => {
         const doc = await myFollowingRef.get();
         return doc.exists; 
     } catch (error) {
-        console.error("Error checking if it continues: ", error);
+        console.error("Error checking if following: ", error);
         throw error;
     }
 };
@@ -264,9 +251,9 @@ export const updateTweetLikes = async (tweetId, likesArray) => {
         await tweetRef.update({
             likes: likesArray 
         });
-        console.log(`Updated likes for the tweet: ${tweetId}`);
+        console.log(`Updated likes for Post: ${tweetId}`);
     } catch (error) {
-        console.error("Error updating likes: ", error);
+        console.error("Error when updating likes: ", error);
         throw error;
     }
 };
@@ -277,9 +264,24 @@ export const addCommentToTweet = async (tweetId, commentObject) => {
         await tweetRef.update({
             comments: firestore.FieldValue.arrayUnion(commentObject)
         });
-        console.log(`Comment added to the tweet: ${tweetId}`);
+        console.log(`Comment added to Post: ${tweetId}`);
     } catch (error) {
-        console.error("Error adding comment: ", error);
+        console.error("Error when adding the comment: ", error);
+        throw error;
+    }
+};
+/**
+ *
+ * @param {string} userId
+ * @param {object} dataToUpdate
+ */
+export const updateUserProfile = async (userId, dataToUpdate) => {
+    try {
+        const userRef = firestore().collection(USER_COLLECTION).doc(userId);
+        await userRef.update(dataToUpdate);
+        console.log("Profile updated in Firestore with the Cloudinary URL");
+    } catch (error) {
+        console.error("Error when updating the profile: ", error);
         throw error;
     }
 };

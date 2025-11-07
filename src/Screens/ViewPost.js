@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, Alert, StyleSheet } from 'react-native';
+import { View, ScrollView, Alert, StyleSheet, Image } from 'react-native';
 import { Card, Text, Button, TextInput } from 'react-native-paper';
 import { firestore } from '../config/firebase'; 
 import { updateTweetLikes, addCommentToTweet } from '../config/firebaseService';
@@ -8,7 +8,6 @@ const ViewPost = ({ route }) => {
     const { post, user, updatePost } = route.params; 
     const [ currentPost, setCurrentPost ] = useState(post);
     const [ newComment, setNewComment ] = useState('');
-
     const [ isCommentValid, setIsCommentValid ] = useState(false);
     const [ commentCharCount, setCommentCharCount ] = useState(0);
 
@@ -41,7 +40,7 @@ const ViewPost = ({ route }) => {
         
         updateTweetLikes(currentPost.id, updatedLikes)
             .catch(err => {
-                console.error("Error when saving the Like: ", err);
+                console.error("Error when saving the like: ", err);
             });
     };
 
@@ -50,7 +49,7 @@ const ViewPost = ({ route }) => {
             Alert.alert("Invalid Comment", "Your comment cannot be empty and must be under 280 characters.");
             return;
         }
-
+        
         const trimmed = newComment.trim();
         
         const comment = {
@@ -92,8 +91,17 @@ const ViewPost = ({ route }) => {
                             </Text>
                             <Text style={styles.postDate}>{currentPost.createdAt}</Text>
                         </View>
+                        {currentPost.text ? (
+                            <Text style={styles.postContent}>{currentPost.text}</Text>
+                        ) : null}
 
-                        <Text style={styles.postContent}>{currentPost.text}</Text>
+                        {currentPost.imageUrl && (
+                            <Image 
+                                source={{ uri: currentPost.imageUrl }} 
+                                style={styles.postImageDetail}
+                                resizeMode="cover"
+                            />
+                        )}
 
                         <View style={styles.postActions}>
                             <Button
@@ -184,23 +192,29 @@ const styles = StyleSheet.create({
     },
     postNames: {
         fontWeight: 'bold',
-        fontSize: 15
+        fontSize: 16
     },
     postDate: {
         color: 'gray',
-        fontSize: 11
+        fontSize: 12
     },
     postContent: {
-        marginTop: 3,
-        fontSize: 16, 
-        lineHeight: 27,
+        marginTop: 10,
+        fontSize: 18, 
+        lineHeight: 26,
+    },
+    postImageDetail: {
+        width: '100%',
+        height: 350, 
+        borderRadius: 8,
+        marginTop: 15,
     },
     postActions: {
         flexDirection: 'row',
         justifyContent: 'space-around',
-        marginTop: 3,
+        marginTop: 15,
         borderTopWidth: 1,
-        borderTopColor: '#eeeeeeff',
+        borderTopColor: '#eee',
         paddingTop: 15,
     },
     commentTitle: {

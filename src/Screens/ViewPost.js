@@ -119,7 +119,11 @@ const ViewPost = ({ route, navigation }) => {
                                 {(currentPost.likes || []).length} Likes
                             </Button>
 
-                            <Button mode="outlined">
+                            <Button 
+                                mode="outlined"
+                                icon="comment-outline"
+                                textColor="#8A2BE2"
+                                theme={{ colors: { outline: "#8A2BE2" } }}>
                                 {(currentPost.comments || []).length} Comments
                             </Button>
                         </View>

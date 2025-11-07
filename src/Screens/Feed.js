@@ -94,6 +94,7 @@ const Feed = ({ navigation, route }) => {
         <Button
           mode="contained"
           buttonColor="#8A2BE2"
+          icon="plus"
           onPress={() =>
             navigation.navigate('PublishPost', {
               user: user, 

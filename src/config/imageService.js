@@ -3,11 +3,6 @@ import axios from 'axios';
 const CLOUD_NAME = 'dzxkcmkq3';
 const UPLOAD_PRESET = 'Zentro';
 
-/**
- * 
- * @param {string} imagePath 
- * @returns {Promise<string>} 
- */
 export const uploadImageToCloudinary = async (imagePath) => {
     const formData = new FormData();
     

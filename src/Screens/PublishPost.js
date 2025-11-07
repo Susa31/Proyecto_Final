@@ -75,7 +75,7 @@ const PublishPost = ({ navigation, route }) => {
             Alert.alert(
                 'Published',
                 'Your Post has been shared with others!',
-                [{ text: 'OK', onPress: () => navigation.goBack() }]
+                [{ text: 'OK', onPress: () => navigation.replace('Feed', { user: user }) }]
             );
         
         } catch (error) {
@@ -121,6 +121,7 @@ const PublishPost = ({ navigation, route }) => {
             <Button
                 mode="outlined"
                 icon="camera"
+                buttonColor="#8A2BE2"
                 onPress={handleSelectImage}
                 style={{ marginBottom: 10 }}
                 disabled={isLoading}

@@ -282,22 +282,6 @@ export const addCommentToTweet = async (tweetId, commentObject) => {
     }
 };
 
-export const updateUserDescription = async (userId, newDescription) => {
-    try {
-      const userRef = firestore().collection(USER_COLLECTION).doc(userId);
-      await userRef.update({ description: newDescription.trim() });
-      console.log(`Description updated for user: ${userId}`);
-    } catch (error) {
-      console.error("Error updating user description:", error);
-      throw error;
-    }
-  };
-};
-/**
- *
- * @param {string} userId
- * @param {object} dataToUpdate
- */
 export const updateUserProfile = async (userId, dataToUpdate) => {
     try {
         const userRef = firestore().collection(USER_COLLECTION).doc(userId);

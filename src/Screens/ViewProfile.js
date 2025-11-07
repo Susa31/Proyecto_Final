@@ -202,6 +202,7 @@ const ViewProfile = ({ route, navigation }) => {
             <Button
               mode="contained"
               icon="plus"
+              buttonColor={'#8A2BE2'}
               onPress={() => 
                 navigation.navigate('PublishPost', { 
                   user: profile,
@@ -211,7 +212,7 @@ const ViewProfile = ({ route, navigation }) => {
                 })
               }
             >
-              New Post
+              Post
             </Button>      
         ) : (
             <Button
@@ -246,6 +247,7 @@ const ViewProfile = ({ route, navigation }) => {
                 mode="contained"
                 loading={savingDescription}
                 disabled={savingDescription}
+                buttonColor={'#8A2BE2'}
                 onPress={async () => {
                   setSavingDescription(true);
                   try {
@@ -263,6 +265,7 @@ const ViewProfile = ({ route, navigation }) => {
               <Button
                 mode="text"
                 onPress={() => setEditingDescription(false)}
+                textColor={'#8A2BE2'}
               >
                 Cancel
               </Button>
@@ -272,10 +275,14 @@ const ViewProfile = ({ route, navigation }) => {
               <Text style={styles.biography}>
                 {profile.description || "Hello there! I am using this app :D"}
               </Text>
+              <Text></Text>
               {isMyProfile && (
                 <Button
                   mode="text"
                   onPress={() => setEditingDescription(true)}
+                  textColor={'#8A2BE2'}
+                  icon="pencil"
+                  
                 >
                   Edit
                 </Button>

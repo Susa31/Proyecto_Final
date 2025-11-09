@@ -122,6 +122,7 @@ const PublishPost = ({ navigation, route }) => {
                 mode="outlined"
                 icon="camera"
                 buttonColor="#8A2BE2"
+                textColor='white'
                 onPress={handleSelectImage}
                 style={{ marginBottom: 10 }}
                 disabled={isLoading}

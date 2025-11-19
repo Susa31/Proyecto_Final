@@ -1,97 +1,80 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+Zentro:
 
-# Getting Started
+A social media application inspired by Twitter, built with React Native. Zentro enables users to share thoughts, images, and videos, follow other users, and engage with content through a clean and intuitive interface.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+Overview:
 
-## Step 1: Start Metro
+Zentro is a mobile-first social platform that replicates core Twitter functionality with a modern tech stack. The application provides real-time updates, media sharing capabilities, and user interaction features.
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+Tech Stack:
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+Frontend: React Native CLI
+Backend & Database: Firebase
+Media Storage: Cloudinary
+HTTP Client: Axios
+Platforms: iOS and Android
 
-```sh
-# Using npm
-npm start
+Project Structure:
 
-# OR using Yarn
-yarn start
-```
+src/
+├── Assets/                 # Static resources
+│   └── zentrologo.png     # Application logo
+├── Components/            # Reusable UI components
+│   ├── PostCard.js        # Individual post display component
+│   └── ZHeader.js         # Custom header component
+├── config/                # Configuration files
+│   ├── firebase.js        # Firebase initialization
+│   ├── firebaseService.js # Firebase API methods
+│   └── imageService.js    # Media handling with Cloudinary
+├── Screens/               # Application screens
+│   ├── Feed.js            # Main content feed
+│   ├── Login.js           # User authentication
+│   ├── Register.js        # User registration
+│   ├── PublishPost.js     # Create new posts
+│   ├── ViewPost.js        # Individual post view
+│   ├── ViewProfile.js     # User profile display
+│   ├── Search.js          # User and content discovery
+│   ├── PostList.js        # Posts collection view
+│   ├── FollowersList.js   # User followers
+│   ├── FollowingList.js   # Users being followed
+│   └── RepostsList.js     # Reposted content
+└── Styles/                # Application styling
+    └── Styles.js          # Centralized style definitions
+App.js #Uses Stack Navigation
 
-## Step 2: Build and run your app
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
+Key Features
+User authentication and registration
 
-### Android
+Post creation with text, images, and videos
+Real-time feed updates
+User profiles with follower/following management
+User search
+Repost functionality
 
-```sh
-# Using npm
-npm run android
+Installation & Setup:
 
-# OR using Yarn
-yarn android
-```
+Clone the repository:
+git clone https://github.com/Susa31/Proyecto_Final
+Install dependencies:
+npm install
+Configure environment variables for Firebase and Cloudinary in the respective config files.
 
-### iOS
+Run the application:
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
+npx react-native run-android
+#or
+npx react-native run-ios
 
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
+Configuration:
 
-```sh
-bundle install
-```
+The application requires proper configuration of Firebase and Cloudinary services. Update the configuration files in the config/ directory with your project credentials:
 
-Then, and every time you update your native dependencies, run:
+firebase.js: Firebase project configuration
+imageService.js: Cloudinary API settings
 
-```sh
-bundle exec pod install
-```
+Development:
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+Built with React Native CLI, Zentro follows component-based architecture principles. The codebase is organized into modular components and services for maintainability and scalability.
 
-```sh
-# Using npm
-npm run ios
-
-# OR using Yarn
-yarn ios
-```
-
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
-
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
-
-## Step 3: Modify your app
-
-Now that you have successfully run the app, let's make changes!
-
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
-
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
-
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
-
-## Congratulations! :tada:
-
-You've successfully run and modified your React Native App. :partying_face:
-
-### Now what?
-
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
-
-# Troubleshooting
-
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
-
-# Learn More
-
-To learn more about React Native, take a look at the following resources:
-
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+The application leverages Firebase for real-time data synchronization and user management, while Cloudinary handles media storage and optimization through Axios-based API calls.

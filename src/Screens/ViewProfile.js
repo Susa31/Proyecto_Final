@@ -1,383 +1,411 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, TouchableOpacity, StyleSheet, Alert } from 'react-native';
-import { Card, Avatar, Divider, Text, Button, TextInput, ActivityIndicator } from 'react-native-paper';
-import { checkIfFollowing, followUser, unfollowUser, updateUserProfile, updateUserDescription } from '../config/firebaseService';
+import { View, TouchableOpacity, ActivityIndicator, Alert, Text, FlatList, Image} from 'react-native';
+import { Card, Avatar, Divider, Button, TextInput, IconButton } from 'react-native-paper'; 
+import { 
+    checkIfFollowing, 
+    followUser, 
+    unfollowUser, 
+    updateUserProfile, 
+    updateUserDescription,
+    getAllUserActivityForProfile
+} from '../config/firebaseService';
 import { firestore } from '../config/firebase'; 
 import { launchImageLibrary } from 'react-native-image-picker';
-import { uploadImageToCloudinary } from '../config/imageService';
+import { uploadMediaToCloudinary } from '../config/imageService';
+import { useIsFocused } from '@react-navigation/native';
+import Video from 'react-native-video';
+import { GlobalStyles } from '../Styles/Styles';
 
 const ViewProfile = ({ route, navigation }) => {
-  const { profileId, currentUserId, onAvatarUpdate } = route.params; 
-  const [profile, setProfile] = useState(null); 
-  const [isFollowing, setIsFollowing] = useState(false);
-  const [loadingProfile, setLoadingProfile] = useState(true);
-  const [loadingFollow, setLoadingFollow] = useState(false);
-  const [isUploading, setIsUploading] = useState(false); 
-  const [editingDescription, setEditingDescription] = useState(false);
-  const [newDescription, setNewDescription] = useState('');
-  const [savingDescription, setSavingDescription] = useState(false);
+    const { profileId, currentUserId, onAvatarUpdate, currentUser } = route.params;
+    const [profile, setProfile] = useState(null); 
+    const [isFollowing, setIsFollowing] = useState(false);
+    const [loadingProfile, setLoadingProfile] = useState(true);
+    const [loadingFollow, setLoadingFollow] = useState(false);
+    const [isUploading, setIsUploading] = useState(false); 
+    const [editingDescription, setEditingDescription] = useState(false);
+    const [newDescription, setNewDescription] = useState('');
+    const [savingDescription, setSavingDescription] = useState(false);
+    const [activityPosts, setActivityPosts] = useState([]);
+    const [loadingPosts, setLoadingPosts] = useState(true);
+    const isFocused = useIsFocused();
 
-  useEffect(() => {
-    setLoadingProfile(true);
-    const unsubscribe = firestore()
-      .collection('users')
-      .doc(profileId)
-      .onSnapshot(
-        (documentSnapshot) => {
-          if (documentSnapshot.exists) {
-            const data = documentSnapshot.data();
-            setProfile({ id: documentSnapshot.id, ...data });
-            setNewDescription(data.description || '');
-          } else {
-            console.error("Could not find the profile with the ID: ", profileId);
-            setProfile(null);
-          }
-          setLoadingProfile(false);
-        },
-        (error) => {
-          console.error("Error fetching profile data: ", error);
-          setLoadingProfile(false);
-        }
-      );
-    return () => unsubscribe(); 
-  }, [profileId]); 
+    const loggedInUser = currentUser || { id: currentUserId };
 
-  useEffect(() => {
-    if (!profile || !currentUserId || profile.id === currentUserId) {
-      setIsFollowing(false);
-      return; 
-    }
-    setLoadingFollow(true);
-    const checkFollow = async () => {
-      try {
-        const following = await checkIfFollowing(currentUserId, profile.id);
-        setIsFollowing(following);
-      } catch (error) {
-        console.error("Error verifying follow status: ", error);
-      } finally {
-        setLoadingFollow(false);
-      }
-    };
-    checkFollow();
-  }, [profile, currentUserId]); 
-
-  const handleFollow = async () => {
-    setLoadingFollow(true);
-    try {
-      if (isFollowing) {
-        await unfollowUser(currentUserId, profile.id);
-      } else {
-        await followUser(currentUserId, profile.id);
-      }
-    } catch (error) {
-      console.error("Error when following / unfollowing: ", error);
-      setLoadingFollow(false); 
-    }
-  };
-
-  const handleSelectImage = () => {
-    if (isUploading) return; 
-
-    launchImageLibrary(
-        { mediaType: 'photo', quality: 0.7 }, 
-        async (response) => {
-            if (response.didCancel) {
-                console.log('User cancelled');
-                return;
-            }
-            if (response.errorCode) {
-                console.log('ImagePicker Error: ', response.errorMessage);
-                Alert.alert("Error", "Could not select the image");
-                return;
-            }
-
-            const uri = response.assets[0].uri;
-            if (!uri) return;
-            
-            setIsUploading(true);
-            
-            try {
-                console.log("Uploading new profile photo to Cloudinary...");
-                const avatarUrl = await uploadImageToCloudinary(uri);
-                
-                console.log("Uploading profile in Firestore...");
-                await updateUserProfile(currentUserId, { avatarUrl: avatarUrl });
-                
-                if (onAvatarUpdate) {
-                    onAvatarUpdate(avatarUrl);
+    useEffect(() => {
+        setLoadingProfile(true);
+        const unsubscribe = firestore()
+            .collection('users')
+            .doc(profileId)
+            .onSnapshot(
+                (documentSnapshot) => {
+                    if (documentSnapshot.exists) {
+                        const data = documentSnapshot.data();
+                        setProfile({ id: documentSnapshot.id, ...data });
+                        if (!editingDescription) { 
+                            setNewDescription(data.description || '');
+                        }
+                    } else {
+                        console.error("Profile not found with ID: ", profileId);
+                        setProfile(null);
+                    }
+                    setLoadingProfile(false);
+                },
+                (error) => {
+                    console.error("Error loading profile: ", error);
+                    setLoadingProfile(false);
                 }
+            );
+        return () => unsubscribe(); 
+    }, [profileId, editingDescription]); 
 
-                console.log("Profile photo updated!");
+    useEffect(() => {
+        if (!profileId || !isFocused) return;
 
+        const fetchActivity = async () => {
+            setLoadingPosts(true);
+            try {
+                const activity = await getAllUserActivityForProfile(profileId, currentUserId);
+                setActivityPosts(activity);
             } catch (error) {
-                console.error("Error when uploading the new profile photo: ", error);
-                Alert.alert("Error", "Could not update your profile photo");
+                console.error("Error loading profile activity: ", error);
             } finally {
-                setIsUploading(false);
+                setLoadingPosts(false);
             }
+        };
+        fetchActivity();
+    }, [profileId, isFocused, currentUserId]);
+
+    useEffect(() => {
+        if (!profile || !currentUserId || profile.id === currentUserId) {
+            setIsFollowing(false);
+            return; 
         }
+        setLoadingFollow(true);
+        const checkFollow = async () => {
+            try {
+                const following = await checkIfFollowing(currentUserId, profile.id);
+                setIsFollowing(following);
+            } catch (error) {
+                console.error("Error checking follow status: ", error);
+            } finally {
+                setLoadingFollow(false);
+            }
+        };
+        checkFollow();
+    }, [profile, currentUserId]); 
+    
+    const handleFollow = async () => {
+        setLoadingFollow(true);
+        try {
+            if (isFollowing) {
+                await unfollowUser(currentUserId, profile.id);
+            } else {
+                await followUser(currentUserId, profile.id);
+            }
+        } catch (error) {
+            console.error("Error following/unfollowing: ", error);
+            if (error.message.includes('firestore/not-found') || error.message.includes('user-not-found')) {
+                Alert.alert("Profile Error", "Cannot perform action. User profile or your profile could not be found in database.");
+            } else {
+                Alert.alert("Error", "An error occurred while trying to follow/unfollow.");
+            }
+            setLoadingFollow(false); 
+        }
+    };
+
+    const handleSelectImage = () => {
+        if (isUploading) return; 
+        launchImageLibrary(
+            { mediaType: 'photo', quality: 0.7 }, 
+            async (response) => {
+                if (response.didCancel) return;
+                if (response.errorCode) {
+                    Alert.alert("Error", "Could not select image.");
+                    return;
+                }
+                const uri = response.assets[0].uri;
+                if (!uri) return;
+                
+                setIsUploading(true); 
+                try {
+                    const asset = response.assets[0];
+                    const avatarUrl = await uploadMediaToCloudinary(asset.uri, asset.type);
+                    await updateUserProfile(currentUserId, { avatarUrl: avatarUrl });
+                    if (onAvatarUpdate) { 
+                        onAvatarUpdate(avatarUrl); 
+                    }
+                    console.log("Profile picture updated!");
+                } catch (error) {
+                    console.error("Failed to upload new profile picture: ", error);
+                    Alert.alert("Error", "Could not update your profile picture.");
+                } finally {
+                    setIsUploading(false);
+                }
+            }
+        );
+    };
+    
+    const handleSaveDescription = async () => {
+        setSavingDescription(true);
+        try {
+            await updateUserDescription(profile.id, newDescription);
+            setEditingDescription(false);
+        } catch (error) {
+            console.error("Failed to update description", error);
+        } finally {
+            setSavingDescription(false);
+        }
+    };
+
+    const getInitials = () => {
+        try {
+            if (!profile || !profile.nameFull) return '...';
+            return profile.nameFull
+                ? profile.nameFull.split(' ').map(word => word[0]).join('').slice(0, 2).toUpperCase()
+                : '';
+        } catch (error) {
+            return '';
+        }
+    };
+
+    const renderActivityItem = ({ item }) => (
+        <View> 
+            {item.isRepost && (
+            <View style={GlobalStyles.repostContainer}>
+                <IconButton icon="repeat-variant" size={16} color="gray" style={{margin: 0, padding: 0}} />
+                <Text style={GlobalStyles.repostText}>{item.authorNameFull} Reposted</Text>
+            </View>
+            )}
+            <TouchableOpacity
+                onPress={() => navigation.navigate('ViewPost', { 
+                    post: item, 
+                    user: loggedInUser
+                })}
+            >
+            <Card style={item.isRepost ? GlobalStyles.repostCard : GlobalStyles.card}>
+                <Card.Content>
+                    <View style={GlobalStyles.postHeader}>
+                        <Text style={GlobalStyles.postNames}>
+                            {item.isRepost ? item.originalAuthorNameFull : item.authorNameFull} 
+                            <Text style={{fontWeight: 'normal', color: 'gray'}}> @{item.isRepost ? item.originalAuthorNameUser : item.authorNameUser}</Text>
+                        </Text>
+                        <Text style={GlobalStyles.postDate}>{item.createdAt}</Text>
+                    </View>
+                {item.text ? (<Text style={GlobalStyles.postContent}>{item.text}</Text>) : null}
+                {item.mediaType === 'image' && item.mediaUrl && (
+                    <Image 
+                        source={{ uri: item.mediaUrl }} 
+                        style={GlobalStyles.postImage} 
+                        resizeMode="cover"
+                    />
+                )}
+                {item.mediaType === 'video' && item.mediaUrl && (
+                    <Video
+                        source={{ uri: item.mediaUrl }}
+                        style={GlobalStyles.postVideo} 
+                        resizeMode="contain"
+                        controls={true}
+                        paused={true}
+                    />
+                )}
+                <View style={GlobalStyles.postActionsText}>
+                    <Text style={GlobalStyles.actionText}>{(item.repostCount || 0)} Reposts</Text>
+                    <Text style={GlobalStyles.actionText}>{(item.likes || []).length} Likes</Text>
+                    <Text style={GlobalStyles.actionText}>{(item.comments || []).length} Comments</Text>
+                </View>
+                    </Card.Content>
+                </Card>
+            </TouchableOpacity>
+        </View>
     );
-  };
-  
-  const getInitials = () => {
-    try {
-      if (!profile || !profile.nameFull) return '...';
-      return profile.nameFull
-        ? profile.nameFull.split(' ').map(word => word[0]).join('').slice(0, 2).toUpperCase()
-        : '';
-    } catch (error) {
-      return '';
+
+    if (loadingProfile) {
+        return <ActivityIndicator style={{ marginTop: 50 }} size="large" />;
     }
-  };
+    if (!profile) {
+        return (
+            <View style={GlobalStyles.whiteContainer}>
+                <Text style={GlobalStyles.errorText}>Profile not found</Text>
+                <Button onPress={() => navigation.goBack()}>Back</Button>
+            </View>
+        );
+    }
+    
+    const isMyProfile = currentUserId === profile.id;
 
-  if (loadingProfile) {
-    return <ActivityIndicator style={{ marginTop: 50 }} size="large" />;
-  }
-  if (!profile) {
     return (
-      <View style={styles.container}>
-        <Text style={styles.errorText}>Profile was not found</Text>
-        <Button onPress={() => navigation.goBack()}>Back</Button>
-      </View>
+        <FlatList
+            style={GlobalStyles.whiteContainer}
+            data={activityPosts}
+            renderItem={renderActivityItem}
+            keyExtractor={item => item.id}
+            ListEmptyComponent={
+                !loadingPosts && (
+                    <Text style={GlobalStyles.emptyTextGeneral}>This user has no recent activity.</Text>
+                )
+            }
+            ListFooterComponent={loadingPosts ? <ActivityIndicator style={{ marginVertical: 20 }} /> : null}
+            ListHeaderComponent={
+                <> 
+                    <View style={GlobalStyles.profileHeader}>
+                        <TouchableOpacity 
+                            onPress={isMyProfile ? handleSelectImage : null}
+                            disabled={!isMyProfile || isUploading}
+                        >
+                            <View>
+                                {profile.avatarUrl ? (
+                                    <Avatar.Image size={100} source={{ uri: profile.avatarUrl }} style={GlobalStyles.avatar} />
+                                ) : (
+                                    <Avatar.Text size={100} label={getInitials()} style={GlobalStyles.avatar} />
+                                )}
+                                {isUploading && (
+                                    <View style={GlobalStyles.uploadingOverlay}>
+                                        <ActivityIndicator size="large" color="#FFFFFF" />
+                                    </View>
+                                )}
+                                {isMyProfile && !isUploading && (
+                                    <View style={GlobalStyles.editIcon}>
+                                        <Avatar.Icon size={30} icon="pencil" style={{backgroundColor: '#999999'}} />
+                                    </View>
+                                )}
+                            </View>
+                        </TouchableOpacity>
+                        <Text style={GlobalStyles.profileName}>{profile.nameFull}</Text>
+                        <Text style={GlobalStyles.profileUsername}>@{profile.nameUser || profile.userName}</Text> 
+                    </View>
+
+                    <View style={GlobalStyles.followContainer}>
+                        <TouchableOpacity
+                            style={GlobalStyles.followBox}
+                            onPress={() => navigation.navigate('FollowersList', { 
+                                userId: profile.id,
+                                currentUser: loggedInUser
+                            })}
+                        >
+                            <Text style={GlobalStyles.followCount}>{profile.followersCount || 0}</Text>
+                            <Text style={GlobalStyles.followLabel}>Followers</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={GlobalStyles.followBox}
+                            onPress={() => navigation.navigate('FollowingList', { 
+                                userId: profile.id,
+                                currentUser: loggedInUser
+                            })}
+                        >
+                            <Text style={GlobalStyles.followCount}>{profile.followingCount || 0}</Text>
+                            <Text style={GlobalStyles.followLabel}>Following</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={GlobalStyles.followBox}
+                            onPress={() => navigation.navigate('PostList', {
+                                userId: profile.id,
+                                currentUser: loggedInUser
+                            })}
+                        >
+                            <Text style={GlobalStyles.followCount}>{profile.postsCount || 0}</Text>
+                            <Text style={GlobalStyles.followLabel}>Posts</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            style={GlobalStyles.followBox}
+                            onPress={() => navigation.navigate('RepostsList', { 
+                                userId: profile.id,
+                                currentUser: loggedInUser 
+                            })}
+                        >
+                            <Text style={GlobalStyles.followCount}>{profile.repostsCount || 0}</Text>
+                            <Text style={GlobalStyles.followLabel}>Reposts</Text>
+                        </TouchableOpacity>
+                    </View>
+
+                    <View style={GlobalStyles.buttonContainer}>
+                        {isMyProfile ? (
+                            <Button
+                                mode="contained"
+                                icon="plus"
+                                buttonColor={'#8A2BE2'}
+                                onPress={() => 
+                                    navigation.navigate('PublishPost', { 
+                                    user: profile, 
+                                    onPublish: () => {}
+                                    })
+                                }
+                            >
+                                Post
+                            </Button>
+                        ) : (
+                            <Button
+                                mode={isFollowing ? 'outlined' : 'contained'}
+                                onPress={handleFollow}
+                                loading={loadingFollow}
+                                disabled={loadingFollow}
+                                buttonColor={isFollowing ? 'white' : '#8A2BE2'}
+                                textColor={isFollowing ? '#8A2BE2' : 'white'}
+                                theme={{ colors: { outline: "#8A2BE2" } }}
+                            >
+                                {isFollowing ? 'Following' : 'Follow'}
+                            </Button>
+                        )}
+                    </View>
+
+                    <Card style={GlobalStyles.profileCard}>
+                        <Card.Content>
+                        <Text style={GlobalStyles.sectionTitle}>About me</Text>
+                        <Divider style={GlobalStyles.divider} />
+                        {isMyProfile && editingDescription ? (
+                            <View>
+                                <TextInput
+                                    value={newDescription}
+                                    onChangeText={setNewDescription}
+                                    multiline
+                                    style={GlobalStyles.input}
+                                    placeholder="Write something about yourself..."
+                                />
+                                <Button
+                                    mode="contained"
+                                    loading={savingDescription}
+                                    disabled={savingDescription}
+                                    buttonColor={'#8A2BE2'}
+                                    onPress={handleSaveDescription}
+                                >
+                                    Save
+                                </Button>
+                                <Button
+                                    mode="text"
+                                    onPress={() => setEditingDescription(false)}
+                                    textColor={'#8A2BE2'}
+                                >
+                                    Cancel
+                                </Button>
+                            </View>
+                        ) : (
+                            <View>
+                                <Text style={GlobalStyles.biography}>
+                                    {profile.description || "Hello there! I am using this app :D"}
+                                </Text>
+                                <Text></Text>
+                                {isMyProfile && (
+                                    <Button
+                                        mode="text"
+                                        onPress={() => setEditingDescription(true)}
+                                        textColor={'#8A2BE2'}
+                                        icon="pencil"
+                                    >
+                                        Edit
+                                    </Button>
+                                )}
+                            </View>
+                        )}
+                        </Card.Content>
+                    </Card>
+                    
+                    {activityPosts.length > 0 && (
+                        <Text style={GlobalStyles.sectionTitleFeed}>Recent Activity</Text>
+                    )}
+                </>
+            }
+        />
     );
-  }
-  
-  const isMyProfile = currentUserId === profile.id;
-
-  return (
-    <ScrollView style={styles.container}>
-      <View style={styles.profileHeader}>
-
-        <TouchableOpacity 
-          onPress={isMyProfile ? handleSelectImage : null}
-          disabled={!isMyProfile || isUploading}
-        >
-          <View>
-            {profile.avatarUrl ? (
-              <Avatar.Image size={100} source={{ uri: profile.avatarUrl }} style={styles.avatar} />
-            ) : (
-              <Avatar.Text size={100} label={getInitials()} style={styles.avatar} />
-            )}
-            {isUploading && (
-              <View style={styles.uploadingOverlay}>
-                <ActivityIndicator size="large" color="#FFFFFF" />
-              </View>
-            )}
-            {isMyProfile && !isUploading && (
-              <View style={styles.editIcon}>
-                <Avatar.Icon size={30} icon="pencil" style={{backgroundColor: '#999999'}} />
-              </View>
-            )}
-          </View>
-        </TouchableOpacity>
-        
-        <Text style={styles.profileName}>{profile.nameFull}</Text>
-        <Text style={styles.profileUsername}>@{profile.nameUser || profile.userName}</Text> 
-      </View>
-
-      <View style={styles.followContainer}>
-        <TouchableOpacity
-          onPress={() => navigation.navigate('FollowersList', { 
-              userId: profile.id,
-              currentUserId: currentUserId
-            })}
-        >
-          <Text style={styles.followCount}>{profile.followersCount || 0}</Text>
-          <Text style={styles.followLabel}>Followers</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={() => navigation.navigate('FollowingList', { 
-              userId: profile.id,
-              currentUserId: currentUserId
-            })}
-        >
-          <Text style={styles.followCount}>{profile.followingCount || 0}</Text>
-          <Text style={styles.followLabel}>Following</Text>
-        </TouchableOpacity>
-      </View>
-
-      <View style={styles.buttonContainer}>
-        {isMyProfile ? (
-            <Button
-              mode="contained"
-              icon="plus"
-              buttonColor={'#8A2BE2'}
-              onPress={() => 
-                navigation.navigate('PublishPost', { 
-                  user: profile,
-                  onPublish: () => {
-                    navigation.replace('Feed', { user: profile });
-                  }
-                })
-              }
-            >
-              Post
-            </Button>      
-        ) : (
-            <Button
-              mode={isFollowing ? 'outlined' : 'contained'}
-              onPress={handleFollow}
-              loading={loadingFollow}
-              disabled={loadingFollow}
-              buttonColor={isFollowing ? 'white' : '#8A2BE2'}
-              textColor={isFollowing ? '#8A2BE2' : 'white'}
-              theme={{ colors: { outline: "#8A2BE2" } }}
-            >
-              {isFollowing ? 'Following' : 'Follow'}
-            </Button>
-        )}
-      </View>
-
-      <Card style={styles.profileCard}>
-        <Card.Content>
-          <Text style={styles.sectionTitle}>About me</Text>
-          <Divider style={styles.divider} />
-
-          {isMyProfile && editingDescription ? (
-            <View>
-              <TextInput
-                value={newDescription}
-                onChangeText={setNewDescription}
-                multiline
-                style={styles.input}
-                placeholder="Write something about yourself..."
-              />
-              <Button
-                mode="contained"
-                loading={savingDescription}
-                disabled={savingDescription}
-                buttonColor={'#8A2BE2'}
-                onPress={async () => {
-                  setSavingDescription(true);
-                  try {
-                    await updateUserDescription(profile.id, newDescription);
-                    setEditingDescription(false);
-                  } catch (error) {
-                    console.error("Failed to update description", error);
-                  } finally {
-                    setSavingDescription(false);
-                  }
-                }}
-              >
-                Save
-              </Button>
-              <Button
-                mode="text"
-                onPress={() => setEditingDescription(false)}
-                textColor={'#8A2BE2'}
-              >
-                Cancel
-              </Button>
-            </View>
-          ) : (
-            <View>
-              <Text style={styles.biography}>
-                {profile.description || "Hello there! I am using this app :D"}
-              </Text>
-              <Text></Text>
-              {isMyProfile && (
-                <Button
-                  mode="text"
-                  onPress={() => setEditingDescription(true)}
-                  textColor={'#8A2BE2'}
-                  icon="pencil"
-                  
-                >
-                  Edit
-                </Button>
-              )}
-            </View>
-          )}
-        </Card.Content>
-      </Card>
-    </ScrollView>
-  );
-};//Closes ViewProfile
-
-const styles = StyleSheet.create({
-  container: { 
-    flex: 1, 
-  },
-  errorText: {
-    textAlign: 'center', 
-    marginTop: 30, 
-    fontSize: 18
-  },
-  profileHeader: { 
-    alignItems: 'center', 
-    padding: 20, 
-  },
-  avatar: { 
-    marginBottom: 10,
-    backgroundColor: '#8A2BE2',
-  },
-  uploadingOverlay: {
-      ...StyleSheet.absoluteFillObject, 
-      backgroundColor: 'rgba(0,0,0,0.4)',
-      justifyContent: 'center',
-      alignItems: 'center',
-      borderRadius: 50,
-  },
-  editIcon: {
-      position: 'absolute',
-      bottom: 5,
-      right: -5,
-      backgroundColor: 'white',
-      borderRadius: 15,
-      padding: 2,
-  },
-  profileName: { 
-    fontSize: 22, 
-    fontWeight: 'bold', 
-  },
-  profileUsername: { 
-    fontSize: 16, 
-    color: 'gray', 
-  },
-  followContainer: { 
-    flexDirection: 'row', 
-    justifyContent: 'space-around', 
-    padding: 10, 
-    borderTopWidth: 1, 
-    borderBottomWidth: 1, 
-    borderColor: '#eee', 
-  },
-  followCount: { 
-    fontSize: 18, 
-    fontWeight: 'bold', 
-    textAlign: 'center', 
-  },
-  followLabel: { 
-    fontSize: 14, 
-    color: 'gray', 
-    textAlign: 'center', 
-  },
-  buttonContainer: { 
-    padding: 20, 
-  },
-  profileCard: { 
-    margin: 15, 
-  },
-  sectionTitle: { 
-    fontSize: 18, 
-    fontWeight: 'bold', 
-  },
-  divider: { 
-    marginVertical: 10, 
-  },
-  biography: { 
-    fontSize: 16, 
-  },
-  input: {
-    fontSize: 16,
-    borderColor: '#ccc',
-    borderWidth: 1,
-    borderRadius: 6,
-    padding: 10,
-    marginBottom: 10,
-  },
-});
-
+}; 
 
 export default ViewProfile;

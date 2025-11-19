@@ -2,25 +2,27 @@ import React, { useEffect } from "react";
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { PaperProvider } from "react-native-paper";
-
 import { GoogleSignin } from '@react-native-google-signin/google-signin';
+
 import Login from './src/Screens/Login';
 import Register from './src/Screens/Register';
 import PublishPost from './src/Screens/PublishPost';
 import Feed from './src/Screens/Feed';
 import ViewPost from './src/Screens/ViewPost';
+import ViewProfile from './src/Screens/ViewProfile';
 import FollowersList from './src/Screens/FollowersList';
 import FollowingList from './src/Screens/FollowingList';
-import Search from './src/Screens/Search';
-import ViewProfile from './src/Screens/ViewProfile';
+import Search from './src/Screens/Search'; 
+import PostList from './src/Screens/PostList';
+import RepostsList from './src/Screens/RepostsList';
 
 const Stack = createNativeStackNavigator();
 
 export default function App() {
 
+  //Not implemented, yet...
   useEffect(() => {
     GoogleSignin.configure({
-
       webClientId: 'TU_WEB_CLIENT_ID.apps.googleusercontent.com', 
     });
   }, []);
@@ -47,7 +49,7 @@ export default function App() {
           <Stack.Screen
             name="PublishPost"
             component={PublishPost}
-            options={{ title: 'Publish a Post' }}
+            options={{ title: 'New Post' }}
           />
           <Stack.Screen
             name="ViewPost"
@@ -70,13 +72,22 @@ export default function App() {
             options={{ title: 'Following' }}
           />
           <Stack.Screen
+            name="PostList"
+            component={PostList}
+            options={{ title: 'Posts' }}
+          />
+          <Stack.Screen
+            name="RepostsList"
+            component={RepostsList}
+            options={{ title: 'Reposts' }}
+          />
+          <Stack.Screen
             name="Search"
             component={Search}
             options={{ title: 'Search User' }}
           />
-
         </Stack.Navigator>
       </NavigationContainer>
     </PaperProvider>
   );
-}//Closes App
+}

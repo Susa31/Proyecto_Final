@@ -1,227 +1,278 @@
 import React, { useState, useEffect } from 'react';
-import { View, FlatList, Text, TouchableOpacity, ActivityIndicator, Alert, StyleSheet, Image } from 'react-native';
+import { View, FlatList, Text, TouchableOpacity, ActivityIndicator, Alert, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Card, Button } from 'react-native-paper';
-import ZHeader from '../Components/ZHeader'; 
-import { getFeedTweets } from '../config/firebaseService';
+import { Card, Button, IconButton, FAB } from 'react-native-paper';
+import ZHeader from '../Components/ZHeader';
+import { getFeedTweets, toggleRepost } from '../config/firebaseService'; 
+import { useIsFocused } from '@react-navigation/native';
+import Video from 'react-native-video'; 
+import { GlobalStyles } from '../Styles/Styles';
+
+const deduplicateFeedPosts = (posts) => {
+    const originalPostIdsInReposts = new Set();
+    const repostIds = new Set();
+
+    posts.forEach(item => {
+        if (item.isRepost && item.originalPostId) {
+            originalPostIdsInReposts.add(item.originalPostId);
+            repostIds.add(item.id);
+        }
+    });
+
+    const finalPosts = posts.filter(item => {
+        if (item.isRepost === true) {
+            return true;
+        }
+        
+        if (originalPostIdsInReposts.has(item.id)) {
+            return false;
+        }
+
+        return true;
+    });
+
+    return finalPosts;
+};
 
 const Feed = ({ navigation, route }) => {
-  const { user } = route.params; 
-  const [posts, setPosts] = useState([]); 
-  const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1); 
-  const MAX_POSTS_PAGE = 10;
-  const [currentUserAvatar, setCurrentUserAvatar] = useState(user.avatarUrl);
-  const onAvatarUpdate = (newAvatarUrl) => {
-    setCurrentUserAvatar(newAvatarUrl);
-  };
+    const { user } = route.params;
+    const [posts, setPosts] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [isRefreshing, setIsRefreshing] = useState(false);
+    const isFocused = useIsFocused();
+    const [currentAvatarUrl, setCurrentAvatarUrl] = useState(user.avatarUrl);
+    const [page, setPage] = useState(1);
+    const MAX_POSTS_PAGE = 10;
 
-  useEffect(() => {
     const loadFeed = async () => {
-        setLoading(true);
         try {
-            console.log("Re-loading feed via focus event for user:", user.id);
-            const feedPosts = await getFeedTweets(user.id); 
-            setPosts(feedPosts); 
+            const feedPosts = await getFeedTweets(user.id);
+            const finalPosts = deduplicateFeedPosts(feedPosts); 
+            setPosts(finalPosts || []);
         } catch (error) {
-            console.error("Error when loading Feed: ", error);
+            console.error("Error loading the feed: ", error);
             if (error.code === 'firestore/failed-precondition') {
-                Alert.alert(
-                    "Database Error", 
-                    "Your app requires a database index. Please check the debug console for more info"
-                );
-              } else {
-                Alert.alert("Error", "Could not load your Feed");
-              }
-          } finally {
-            setLoading(false);
+                Alert.alert("Database Error", "An index is needed. Check the debug console and click the link to create it.");
+            } else {
+                Alert.alert("Error", "Could not load your feed.");
+            }
         }
     };
 
-    loadFeed();
+    useEffect(() => {
+        if (isFocused) {
+            setLoading(true);
+            loadFeed().finally(() => setLoading(false));
+        }
+    }, [user.id, isFocused]);
 
-    const unsubscribe = navigation.addListener('focus', loadFeed);
+    const start = (page - 1) * MAX_POSTS_PAGE;
+    const end = start + MAX_POSTS_PAGE;
+    const visiblePosts = posts.slice(start, end);
 
-    return unsubscribe; 
-  }, [user.id, navigation]);
-  
-  const start = (page - 1) * MAX_POSTS_PAGE;
-  const end = start + MAX_POSTS_PAGE;
-  const visiblePosts = posts.slice(start, end); 
+    const onRefresh = async () => {
+        setIsRefreshing(true);
+        await loadFeed();
+        setPage(1);
+        setIsRefreshing(false);
+    };
 
-  const updatePost = (updatedPost) => {
-    setPosts((prevPosts) =>
-      prevPosts.map((p) => (p.id === updatedPost.id ? updatedPost : p))
+    const updatePost = (updatedPost) => {
+        setPosts((prevPosts) =>
+            prevPosts.map((p) => (p.id === updatedPost.id ? updatedPost : p))
+        );
+    };
+
+    const handleAvatarUpdate = (newUrl) => {
+        console.log("Avatar updated in Feed, setting URL:", newUrl);
+        setCurrentAvatarUrl(newUrl);
+    };
+
+    const handleRepost = (postToToggle) => {
+        const originalPostId = postToToggle.isRepost ? postToToggle.originalPostId : postToToggle.id;
+        
+        if (!originalPostId) {
+            Alert.alert("Error", "Could not find original post to repost/undo.");
+            return;
+        }
+
+        Alert.alert(
+            "Confirm Action",
+            postToToggle.hasBeenRepostedByMe ? 
+                "Do you want to remove this repost?" :
+                "Do you want to repost this post?",
+            [{ text: "Cancel", style: "cancel" },
+            {
+                text: postToToggle.hasBeenRepostedByMe ? "Remove" : "Repost",
+                onPress: async () => {
+                try {
+                    const result = await toggleRepost(originalPostId, user.id);
+                    
+                    if (result.action === 'created') {
+                        Alert.alert("Success", "Repost published!");
+                    } else {
+                        Alert.alert("Success", "Repost removed!");
+                    }
+                    
+                    await loadFeed(); 
+                } catch (error) {
+                    console.error("Error with repost action: ", error);
+                    Alert.alert("Error", "Could not perform repost action. Please try again.");
+                }
+            }
+            }
+            ]
+        );
+    };
+    
+    const handleNewPostPublished = (newPost) => {
+        if (newPost) {
+            console.log("New post published! Adding to the feed.");
+            setPosts(prevPosts => [newPost, ...prevPosts]);
+            setPage(1);
+        }
+    };
+
+    const goToPublishPost = () => {
+        navigation.navigate('PublishPost', {
+            user: user,
+            onPublish: handleNewPostPublished,
+        });
+    };
+
+    const renderItem = ({ item }) => {
+        if (!item) return null;
+
+        const displayAuthorName = item.isRepost ? item.originalAuthorNameFull : item.authorNameFull;
+        const displayAuthorUser = item.isRepost ? item.originalAuthorNameUser : item.authorNameUser;
+        
+        return (
+        <View>
+            {item.isRepost && (
+                <View style={GlobalStyles.repostContainer}>
+                    <IconButton icon="repeat-variant" size={16} color="gray" style={{margin: 0, padding: 0}} />
+                    <Text style={GlobalStyles.repostText}>{item.authorNameFull} Reposted</Text>
+                </View>
+            )}
+            <TouchableOpacity
+              onPress={() => navigation.navigate('ViewPost', { post: item, user: user, updatePost: updatePost })}
+            >
+              <Card style={item.isRepost ? GlobalStyles.repostCard : GlobalStyles.card}>
+                <Card.Content>
+                  <View style={GlobalStyles.postHeader}>
+                    <Text style={GlobalStyles.postNames}>
+                        {displayAuthorName}
+                        <Text style={{fontWeight: 'normal', color: 'gray'}}> @{displayAuthorUser}</Text> 
+                    </Text>
+                    <Text style={GlobalStyles.postDate}>{item.createdAt || '...'}</Text>
+                  </View>
+                  {item.text ? (<Text style={GlobalStyles.postContent}>{item.text}</Text>) : null}
+                  {item.mediaType === 'image' && item.mediaUrl && (
+                    <Image
+                      source={{ uri: item.mediaUrl }}
+                      style={GlobalStyles.postImage}
+                      resizeMode="cover"
+                    />
+                  )}
+                  {item.mediaType === 'video' && item.mediaUrl && (
+                    <Video
+                      source={{ uri: item.mediaUrl }}
+                      style={GlobalStyles.postVideo}
+                      resizeMode="cover"
+                      controls={true}
+                      paused={true}
+                      onError={(e) => console.log("Video Error:", e)}
+                    />
+                  )}
+                  <View style={GlobalStyles.postActions}>
+                      <Button
+                        icon={item.hasBeenRepostedByMe ? "repeat" : "repeat-variant"} 
+                        onPress={() => handleRepost(item)}
+                        disabled={item.isRepost && item.authorId !== user.id} 
+                        labelStyle={GlobalStyles.actionButtonLabel}
+                      >
+                        {item.repostCount || 0}
+                      </Button>
+                      <Button
+                        icon={(item.likes || []).includes(user.nameUser) ? 'heart' : 'heart-outline'}
+                        onPress={() => navigation.navigate('ViewPost', { post: item, user: user, updatePost: updatePost })}
+                        labelStyle={GlobalStyles.actionButtonLabel}
+                      >
+                        {(item.likes || []).length}
+                      </Button>
+                      <Button
+                        icon="comment-outline"
+                        onPress={() => navigation.navigate('ViewPost', { post: item, user: user, updatePost: updatePost })}
+                        labelStyle={GlobalStyles.actionButtonLabel}
+                      >
+                        {(item.comments || []).length}
+                      </Button>
+                    </View>
+                </Card.Content>
+              </Card>
+            </TouchableOpacity>
+        </View>
+      )};
+
+    const listIfEmpty = (
+        <View style={GlobalStyles.emptyContainer}>
+            <Text style={GlobalStyles.emptyText}>Nothing to show... follow people or post something!</Text>
+        </View>
     );
-  };
 
-  const renderItem = ({ item }) => (
-    <TouchableOpacity
-      onPress={() => navigation.navigate('ViewPost', { post: item, user: user, updatePost })}
-    >
-      <Card style={styles.card}>
-        <Card.Content>
-          <View style={styles.postHeader}>
-            <Text style={styles.postNames}>{item.authorNameFull} @{item.authorNameUser}</Text>
-            <Text style={styles.postDate}>{item.createdAt}</Text>
-          </View>
-          <Text style={styles.postContent}>{item.text}</Text>
-          {item.imageUrl && (
-            <Image 
-                source={{ uri: item.imageUrl }} 
-                style={styles.postImage} 
-                resizeMode="cover"
+    const renderPagination = () => (
+        <View style={GlobalStyles.paginationContainer}>
+            <Button
+                mode="outlined"
+                disabled={page === 1}
+                onPress={() => setPage(prev => prev - 1)}
+                theme={{ colors: { outline: "#8A2BE2" } }}
+                textColor="#8A2BE2"
+            >
+                Previous
+            </Button>
+            <Text style={GlobalStyles.paginationText}>Page {page}</Text>
+            <Button
+                mode="outlined"
+                disabled={end >= posts.length}
+                onPress={() => setPage(prev => prev + 1)}
+                theme={{ colors: { outline: "#8A2BE2" } }}
+                textColor="#8A2BE2"
+            >
+                Next
+            </Button>
+        </View>
+    );
+
+    return (
+        <SafeAreaView style={GlobalStyles.feedContainer}>
+            <ZHeader 
+                user={user} 
+                navigation={navigation}
+                avatarUrl={currentAvatarUrl}
+                onAvatarUpdate={handleAvatarUpdate}
             />
-          )} 
-          <View style={styles.postActions}>
-              <Text style={styles.actionText}> {(item.likes || []).length} Likes</Text>
-              <Text style={styles.actionText}> {(item.comments || []).length} Comments</Text>
-            </View>
-        </Card.Content>
-      </Card>
-    </TouchableOpacity>
-  ); 
-
-  const listIfEmpty = (
-    <View style={styles.emptyContainer}>
-      <Text style={styles.emptyText}>Nothing to show, yet... Follow someone or publish something!</Text>
-    </View>
-  );
-
-  const listFooter = (
-    <>
-      <View style={styles.footerButtonContainer}>
-        <Button
-          mode="contained"
-          buttonColor="#8A2BE2"
-          icon="plus"
-          onPress={() =>
-            navigation.navigate('PublishPost', {
-              user: user, 
-              onPublish: (newPost) => {
-                setPosts(prev => [newPost, ...prev]);
-                setPage(1);
-              }
-            })
-          }
-        >
-          Post
-        </Button>
-      </View>
-
-      <View style={styles.paginationContainer}>
-        <Button
-          disabled={page === 1}
-          onPress={() => setPage(prev => prev - 1)}
-        >
-          Previous
-        </Button>
-        <Text style={styles.paginationText}>Page {page}</Text>
-        <Button
-          disabled={end >= posts.length}
-          onPress={() => setPage(prev => prev + 1)}
-        >
-          Next
-        </Button>
-      </View>
-    </>
-  ); 
-
-  return (
-    <SafeAreaView style={styles.container}>
-      <ZHeader 
-        user={user} 
-        navigation={navigation} 
-        avatarUrl={currentUserAvatar}
-        onAvatarUpdate={onAvatarUpdate} 
-      />
-      {loading ? (
-        <ActivityIndicator style={{marginTop: 30}} size="large" />
-      ) : (
-        <FlatList
-          data={visiblePosts}
-          renderItem={renderItem}
-          keyExtractor={item => item.id}
-          ListEmptyComponent={listIfEmpty}
-          ListFooterComponent={listFooter}
-        />
-      )}
-    </SafeAreaView>
-  );
-};//Closes Feed
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#f0f2f5'
-    },
-    card: {
-        marginVertical: 8,
-        marginHorizontal: 10,
-        elevation: 1,
-    },
-    postHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 8,
-    },
-    postNames: {
-        fontWeight: 'bold',
-        fontSize: 16,
-    },
-    postDate: {
-        color: 'gray',
-        fontSize: 12,
-        alignSelf: 'center'
-    },
-    postContent: {
-        fontSize: 15,
-        lineHeight: 22,
-        marginBottom: 10,
-    },
-    postImage: {
-        width: '100%',
-        height: 250,
-        borderRadius: 8,
-        marginTop: 5,
-    },
-    postActions: {
-        flexDirection: 'row',
-        marginTop: 12,
-        justifyContent: 'space-around',
-        borderTopWidth: 1,
-        borderTopColor: '#eee',
-        paddingTop: 10,
-    },
-    actionText: {
-        color: '#555'
-    },
-    emptyContainer: {
-        padding: 20,
-        alignItems: 'center',
-        marginTop: 50,
-    },
-    emptyText: {
-        fontSize: 16,
-        color: 'gray'
-    },
-    footerButtonContainer: {
-        padding: 10,
-        borderTopWidth: 1,
-        borderColor: '#eee',
-    },
-    paginationContainer: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        padding: 10,
-        alignItems: 'center'
-    },
-    paginationText: {
-        fontSize: 16,
-        color: '#333'
-    }
-});//Closes styles
+            {loading ? (
+                <ActivityIndicator style={{marginTop: 30}} size="large" />
+            ) : (
+                <FlatList
+                    data={visiblePosts}
+                    renderItem={renderItem}
+                    keyExtractor={(item, index) => item?.id || index.toString()}
+                    ListEmptyComponent={listIfEmpty}
+                    onRefresh={onRefresh}
+                    refreshing={isRefreshing}
+                    ListFooterComponent={posts.length > 0 ? renderPagination : null}
+                />
+            )}
+            <FAB
+                style={GlobalStyles.fab}
+                icon="plus"
+                onPress={goToPublishPost}
+                color="white"
+            />
+        </SafeAreaView>
+    );
+};
 
 export default Feed;
-
-//Styles might change later

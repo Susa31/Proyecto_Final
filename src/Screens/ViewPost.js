@@ -195,6 +195,7 @@ const ViewPost = ({ route, navigation }) => {
                                 if (authorId) {
                                     navigation.navigate('ViewProfile', { 
                                         profileId: authorId,
+                                        currentUserId: user.id,
                                         currentUser: user
                                     });
                                 }
@@ -287,6 +288,7 @@ const ViewPost = ({ route, navigation }) => {
                                     <TouchableOpacity onPress={() => {
                                         navigation.navigate('ViewProfile', { 
                                             profileId: comment.authorId,
+                                            currentUserId: user.id,
                                             currentUser: user
                                         });
                                     }}>

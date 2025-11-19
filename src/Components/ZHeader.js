@@ -41,15 +41,17 @@ const ZHeader = ({ user, navigation, avatarUrl, onAvatarUpdate }) => {
     }
   };
 
+  const currentAvatarUrl = avatarUrl || user?.avatarUrl;
+
   return (
     <SafeAreaView style={GlobalStyles.headerSafeArea}>
       <View style={GlobalStyles.headerContainer}>
         <TouchableOpacity onPress={handleGoToProfile} style={GlobalStyles.headerAvatarWrapper}>
-          {user && (user.avatarUrl || user.avatarUrl) ? (
+          {currentAvatarUrl ? (
             <Avatar.Image
               size={50}
-              source={{ uri: avatarUrl || user.avatarUrl }}
-              key={avatarUrl || user.avatarUrl} 
+              source={{ uri: currentAvatarUrl }}
+              key={currentAvatarUrl}
             />
           ) : (
             <Avatar.Text
@@ -78,4 +80,3 @@ const ZHeader = ({ user, navigation, avatarUrl, onAvatarUpdate }) => {
 };
 
 export default ZHeader;
-

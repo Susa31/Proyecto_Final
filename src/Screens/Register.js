@@ -192,6 +192,7 @@ const Register = ({ navigation }) => {
                             <Button
                                 mode='contained' onPress={handleSave} style={GlobalStyles.authButton}
                                 icon="account-plus" disabled={!isFormValid}
+                                buttonColor="#8A2BE2"
                             >
                                 Create Account
                             </Button>

@@ -451,13 +451,13 @@ export const GlobalStyles = StyleSheet.create({
     },
     postImage: {
         width: '100%',
-        height: 200,
+        height: 400,
         borderRadius: 8,
         marginTop: 5,
     },
     postVideo: {
         width: '100%',
-        height: 250,
+        height: 300,
         borderRadius: 8,
         marginTop: 5,
         backgroundColor: '#000',

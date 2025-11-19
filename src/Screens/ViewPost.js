@@ -1,138 +1,260 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, Alert, StyleSheet, Image, TouchableOpacity } from 'react-native';
-import { Card, Text, Button, TextInput } from 'react-native-paper';
-import { auth, firestore } from '../config/firebase'; 
-import { updateTweetLikes, addCommentToTweet } from '../config/firebaseService';
+import { View, ScrollView, Alert, Image, TouchableOpacity } from 'react-native';
+import { Card, Text, Button, TextInput, IconButton } from 'react-native-paper';
+import { firestore } from '../config/firebase'; 
+import { updateTweetLikes, addCommentToTweet, toggleRepost } from '../config/firebaseService';
+import Video from 'react-native-video';
+import { GlobalStyles } from '../Styles/Styles';
 
 const ViewPost = ({ route, navigation }) => {
-    const { post, user, updatePost } = route.params; 
+    const { post, user } = route.params || {}; 
+    
+    console.log('ViewPost route.params:', route.params);
+    console.log('Post data:', post);
+    console.log('User data:', user);
+
+    if (!post || !user) {
+        return (
+            <View style={GlobalStyles.feedContainer}>
+                <Text style={GlobalStyles.errorText}>Error loading post</Text>
+                <Button onPress={() => navigation.goBack()}>Go Back</Button>
+            </View>
+        );
+    }
+    
+    const postContentId = post.isRepost ? post.originalPostId : post.id;
+    
     const [ currentPost, setCurrentPost ] = useState(post);
     const [ newComment, setNewComment ] = useState('');
     const [ isCommentValid, setIsCommentValid ] = useState(false);
     const [ commentCharCount, setCommentCharCount ] = useState(0);
+    const [ isRepostedByMe, setIsRepostedByMe ] = useState(false); 
 
     useEffect(() => {
-        setCurrentPost(post);
-    }, [post]);
+        if (!postContentId) return; 
+
+        const unsubscribe = firestore()
+            .collection('Tweets')
+            .doc(postContentId) 
+            .onSnapshot(
+                (doc) => {
+                    if (doc.exists) {
+                        const data = doc.data();
+                        
+                        const formattedComments = (data.comments || []).map(comment => ({
+                            ...comment,
+                            createdAt: comment.createdAt?.toDate ? comment.createdAt.toDate().toLocaleString() : (comment.createdAt || '')
+                        }));
+                        
+                        setCurrentPost(prevPost => {
+                            const freshContentData = {
+                                originalPostId: postContentId, 
+                                authorId: data.authorId,
+                                text: data.text,
+                                mediaUrl: data.mediaUrl,
+                                mediaType: data.mediaType,
+                                comments: formattedComments,
+                                likes: data.likes || [],
+                                repostCount: data.repostCount || 0,
+                                authorNameFull: data.authorNameFull,
+                                authorNameUser: data.authorNameUser,
+                                isRepost: false,
+                            };
+                            
+                            if (prevPost.isRepost) {
+                                return {
+                                    ...prevPost, 
+                                    ...freshContentData, 
+                                    id: prevPost.id, 
+                                    createdAt: prevPost.createdAt,
+                                };
+                            }
+                            
+                            return { ...prevPost, ...freshContentData, id: prevPost.id };
+                        });
+                    }
+                },
+                (error) => {
+                    console.error("Error listening to post:", error);
+                }
+            );
+        return () => unsubscribe();
+    }, [postContentId]); 
+
+    useEffect(() => {
+        if (!postContentId || !user?.id) return;
+        
+        const repostQuery = firestore()
+            .collection('Tweets')
+            .where('originalPostId', '==', postContentId)
+            .where('authorId', '==', user.id)
+            .limit(1);
+
+        const unsubscribeCheck = repostQuery.onSnapshot(
+            (snapshot) => {
+                setIsRepostedByMe(!snapshot.empty);
+            },
+            (error) => {
+                console.error("Error checking repost status:", error);
+            }
+        );
+        
+        return () => unsubscribeCheck();
+    }, [postContentId, user?.id]);
 
     useEffect(() => {
         const trimmed = newComment.trim();
         setCommentCharCount(newComment.length);
-        setIsCommentValid(trimmed.length > 0 && newComment.length <= 280);
+        setIsCommentValid(trimmed.length > 0 && trimmed.length <= 280);
     }, [newComment]);
 
     const handleLike = () => {
+        const targetId = currentPost.originalPostId || currentPost.id;
+        
         const userHasLiked = (currentPost.likes || []).includes(user.nameUser); 
         let updatedLikes;
-        
         if (userHasLiked) {
             updatedLikes = (currentPost.likes || []).filter(u => u !== user.nameUser);
         } else {
             updatedLikes = [...(currentPost.likes || []), user.nameUser];
         }
         
-        const updated = {
-            ...currentPost,
-            likes: updatedLikes,
-        };
-        setCurrentPost(updated);
-        updatePost(updated);
-        
-        updateTweetLikes(currentPost.id, updatedLikes)
-            .catch(err => {
-                console.error("Error when saving the like: ", err);
-            });
+        updateTweetLikes(targetId, updatedLikes).catch(err => console.error("Failed to save like: ", err));
     };
 
     const handleAddComment = () => {
-        if (!isCommentValid) {
-            Alert.alert("Invalid Comment", "Your comment cannot be empty and must be under 280 characters.");
-            return;
-        }
+        if (!isCommentValid) return;
         
-        const trimmed = newComment.trim();
+        const targetId = currentPost.originalPostId || currentPost.id;
         
         const comment = {
             id: Date.now().toString(),
             fullname: user.nameFull, 
             username: user.nameUser, 
             authorId: user.id,
-            text: trimmed,
+            text: newComment.trim(),
             createdAt: new Date(), 
         };
-
-        const localComment = {
-            ...comment,
-            createdAt: comment.createdAt.toLocaleString(),
-        };
-
-        const updated = {
-            ...currentPost,
-            comments: [localComment, ...(currentPost.comments || [])],
-        };
-        
-        setCurrentPost(updated);
-        updatePost(updated);
+        addCommentToTweet(targetId, comment).catch(err => console.error("Failed to save comment: ", err));
         setNewComment('');
+    };
+
+    const handleRepost = () => {
+        const originalPostId = currentPost.originalPostId || currentPost.id;
         
-        addCommentToTweet(currentPost.id, comment)
-            .catch(err => {
-                console.error("Error when saving the comment: ", err);
-            });
+        if (!originalPostId) {
+            Alert.alert("Error", "Could not find post reference.");
+            return;
+        }
+
+        Alert.alert(
+            "Confirm Action",
+            isRepostedByMe ? 
+                "Do you want to remove this repost?" : 
+                "Do you want to repost this post?",
+            [
+                { text: "Cancel", style: "cancel" },
+                { 
+                    text: isRepostedByMe ? "Remove" : "Repost", 
+                    onPress: async () => {
+                        try {
+                            const result = await toggleRepost(originalPostId, user.id);
+                            
+                            if (result.action === 'created') {
+                                Alert.alert("Success!", "Your repost has been published.");
+                            } else {
+                                Alert.alert("Success!", "Your repost has been removed.");
+                            }
+                            
+                            navigation.goBack(); 
+                        } catch (error) {
+                            console.error("Error with repost action: ", error);
+                            Alert.alert("Error", "Could not perform the repost action.");
+                        }
+                    }
+                }
+            ]
+        );
     };
 
     return (
-        <ScrollView style={styles.container}>
-            <View style={styles.innerContainer}>
-                <Card style={styles.card}>
-                    <Card.Content>
-                        <View style={styles.postHeader}>
-                            <TouchableOpacity onPress={() => {
-                                navigation.navigate('ViewProfile', { 
-                                    profileId: currentPost.authorId,
-                                    currentUserId: user.id
-                                });
-                            }}>
-                                <Text style={styles.postNames}>{currentPost.authorNameFull} @{currentPost.authorNameUser}</Text>
-                            </TouchableOpacity>
-                            <Text style={styles.postDate}>{currentPost.createdAt}</Text>
-                        </View>
-                        {currentPost.text ? (
-                            <Text style={styles.postContent}>{currentPost.text}</Text>
-                        ) : null}
+        <ScrollView style={GlobalStyles.feedContainer}>
+            <View style={GlobalStyles.viewPostInnerContainer}>
+                {currentPost.isRepost && (
+                    <View style={GlobalStyles.repostContainer}>
+                        <IconButton icon="repeat-variant" size={16} color="gray" style={{margin: 0, padding: 0}} />
+                        <Text style={GlobalStyles.repostText}>{currentPost.authorNameFull} Reposted</Text>
+                    </View>
+                )}
 
-                        {currentPost.imageUrl && (
+                <Card style={currentPost.isRepost ? GlobalStyles.repostCard : GlobalStyles.card}>
+                    <Card.Content>
+                        <View style={GlobalStyles.postHeader}>
+                            <TouchableOpacity onPress={() => {
+                                const authorId = currentPost.originalAuthorId || currentPost.authorId;
+                                if (authorId) {
+                                    navigation.navigate('ViewProfile', { 
+                                        profileId: authorId,
+                                        currentUser: user
+                                    });
+                                }
+                            }}>
+                                <Text style={GlobalStyles.postNames}>
+                                    {currentPost.originalAuthorNameFull || currentPost.authorNameFull} 
+                                    <Text style={{fontWeight: 'normal', color: 'gray'}}> @{currentPost.originalAuthorNameUser || currentPost.authorNameUser}</Text>
+                                </Text>
+                                <Text style={GlobalStyles.postDate}>{currentPost.createdAt}</Text>
+                            </TouchableOpacity>
+                        </View>
+
+                        {currentPost.text ? (<Text style={GlobalStyles.postContentDetail}>{currentPost.text}</Text>) : null}
+                        
+                        {currentPost.mediaType === 'image' && currentPost.mediaUrl && (
                             <Image 
-                                source={{ uri: currentPost.imageUrl }} 
-                                style={styles.postImageDetail}
+                                source={{ uri: currentPost.mediaUrl }} 
+                                style={GlobalStyles.postImageDetail} 
                                 resizeMode="cover"
                             />
                         )}
 
-                        <View style={styles.postActions}>
+                        {currentPost.mediaType === 'video' && currentPost.mediaUrl && (
+                            <Video
+                                source={{ uri: currentPost.mediaUrl }}
+                                style={GlobalStyles.postImageDetail} 
+                                resizeMode="contain"
+                                controls={true}
+                                paused={false}
+                            />
+                        )}
+
+                        <View style={GlobalStyles.viewPostActions}>
+                            <Button
+                                icon={isRepostedByMe ? "repeat" : "repeat-variant"}
+                                onPress={handleRepost}
+                                disabled={!postContentId} 
+                            >
+                                {currentPost.repostCount || 0}
+                            </Button>
+                            
                             <Button
                                 mode="contained"
                                 buttonColor="#8A2BE2"
                                 onPress={handleLike}
                                 icon={(currentPost.likes || []).includes(user.nameUser) ? 'heart' : 'heart-outline'}
                             >
-                                {(currentPost.likes || []).length} Likes
+                                {(currentPost.likes || []).length}
                             </Button>
-
-                            <Button 
-                                mode="outlined"
-                                icon="comment-outline"
-                                textColor="#8A2BE2"
-                                theme={{ colors: { outline: "#8A2BE2" } }}>
+                            
+                            <Text style={GlobalStyles.actionButtonLabel}>
                                 {(currentPost.comments || []).length} Comments
-                            </Button>
+                            </Text>
                         </View>
                     </Card.Content>
                 </Card>
 
-                <Card style={styles.card}>
+                <Card style={GlobalStyles.card}>
                     <Card.Content>
-                        <Text style={styles.commentTitle}>Add a comment</Text>
+                        <Text style={GlobalStyles.commentTitle}>Add a comment</Text>
                         <TextInput
                             label="Comment something!"
                             value={newComment}
@@ -142,11 +264,7 @@ const ViewPost = ({ route, navigation }) => {
                             maxLength={280} 
                             style={{ marginBottom: 10 }}
                         />
-                        
-                        <Text style={styles.charCount}>
-                            {commentCharCount}/280
-                        </Text>
-                        
+                        <Text style={GlobalStyles.charCount}>{commentCharCount}/280</Text>
                         <Button
                             mode="contained"
                             buttonColor="#8A2BE2"
@@ -158,27 +276,29 @@ const ViewPost = ({ route, navigation }) => {
                     </Card.Content>
                 </Card>
 
-                <View style={styles.commentsList}>
-                    <Text style={styles.commentTitle}>
+                <View style={GlobalStyles.commentsList}>
+                    <Text style={GlobalStyles.commentTitle}>
                         Comments ({(currentPost.comments || []).length})
                     </Text>
-                    {(currentPost.comments || []).map((comment) => (
-                        <Card key={comment.id} style={styles.commentCard}>
+                    {(currentPost.comments || []).slice().reverse().map((comment) => (
+                        <Card key={comment.id} style={GlobalStyles.commentCard}>
                             <Card.Content>
-                                <View style={styles.postHeader}>
+                                <View style={GlobalStyles.postHeader}>
                                     <TouchableOpacity onPress={() => {
                                         navigation.navigate('ViewProfile', { 
                                             profileId: comment.authorId,
-                                            currentUserId: user.id
+                                            currentUser: user
                                         });
                                     }}>
-                                        <Text style={styles.commentAuthor}>{comment.fullname} @{comment.username}</Text>
+                                        <Text style={GlobalStyles.commentAuthor}>
+                                            {comment.fullname} <Text style={{fontWeight: 'normal', color: 'gray'}}>@{comment.username}</Text>
+                                        </Text>
                                     </TouchableOpacity>
-                                    <Text style={styles.commentDate}>
+                                    <Text style={GlobalStyles.commentDate}>
                                         {comment.createdAt?.toString() || ''}
                                     </Text>
                                 </View>
-                                <Text style={styles.commentText}>{comment.text}</Text>
+                                <Text style={GlobalStyles.commentText}>{comment.text}</Text>
                             </Card.Content>
                         </Card>
                     ))}
@@ -186,81 +306,6 @@ const ViewPost = ({ route, navigation }) => {
             </View>
         </ScrollView>
     );
-};//Closes ViewPost
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#f0f2f5',
-    },
-    innerContainer: {
-        padding: 16,
-    },
-    card: {
-        marginBottom: 15,
-        elevation: 1,
-    },
-    postHeader: {
-        flexDirection: 'row',
-        justifyContent: 'space-between',
-        marginBottom: 10,
-    },
-    postNames: {
-        fontWeight: 'bold',
-        fontSize: 16
-    },
-    postDate: {
-        color: 'gray',
-        fontSize: 12
-    },
-    postContent: {
-        marginTop: 10,
-        fontSize: 18, 
-        lineHeight: 26,
-    },
-    postImageDetail: {
-        width: '100%',
-        height: 350, 
-        borderRadius: 8,
-        marginTop: 15,
-    },
-    postActions: {
-        flexDirection: 'row',
-        justifyContent: 'space-around',
-        marginTop: 15,
-        borderTopWidth: 1,
-        borderTopColor: '#eee',
-        paddingTop: 15,
-    },
-    commentTitle: {
-        fontWeight: 'bold',
-        fontSize: 18,
-        marginBottom: 10,
-    },
-    charCount: {
-        textAlign: 'right',
-        marginBottom: 5,
-        color: 'gray'
-    },
-    commentsList: {
-        marginTop: 20,
-    },
-    commentCard: {
-        marginBottom: 8,
-        backgroundColor: '#fff'
-    },
-    commentAuthor: {
-        fontWeight: 'bold'
-    },
-    commentDate: {
-        color: 'gray',
-        fontSize: 11
-    },
-    commentText: {
-        marginTop: 4
-    }
-});//Closes styles
+};
 
 export default ViewPost;
-
-//Styles might change later

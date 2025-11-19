@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { auth } from '../config/firebase'; 
 import { Appbar, Avatar } from 'react-native-paper'; 
+import { GlobalStyles } from '../Styles/Styles';
 
 const ZHeader = ({ user, navigation, avatarUrl, onAvatarUpdate }) => {
   const handleLogout = async () => {
@@ -19,10 +20,11 @@ const ZHeader = ({ user, navigation, avatarUrl, onAvatarUpdate }) => {
   };
 
   const handleGoToProfile = () => {
-    if (user) {
+    if (user && user.id) {
       navigation.navigate('ViewProfile', { 
           profileId: user.id, 
           currentUserId: user.id,
+          currentUser: user,
           onAvatarUpdate: onAvatarUpdate 
         });
     }
@@ -40,9 +42,9 @@ const ZHeader = ({ user, navigation, avatarUrl, onAvatarUpdate }) => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
-        <TouchableOpacity onPress={handleGoToProfile} style={styles.avatarWrapper}>
+    <SafeAreaView style={GlobalStyles.headerSafeArea}>
+      <View style={GlobalStyles.headerContainer}>
+        <TouchableOpacity onPress={handleGoToProfile} style={GlobalStyles.headerAvatarWrapper}>
           {user && (user.avatarUrl || user.avatarUrl) ? (
             <Avatar.Image
               size={50}
@@ -53,12 +55,12 @@ const ZHeader = ({ user, navigation, avatarUrl, onAvatarUpdate }) => {
             <Avatar.Text
               size={47}
               label={getInitials()}
-              style={styles.avatarFallback}
+              style={GlobalStyles.headerAvatarFallback}
             />
           )}
         </TouchableOpacity>
 
-        <Text style={styles.username}>
+        <Text style={GlobalStyles.headerUsername}>
           {`@${user ? user.nameUser : 'Guest'}`}
         </Text>
 
@@ -68,53 +70,12 @@ const ZHeader = ({ user, navigation, avatarUrl, onAvatarUpdate }) => {
           onPress={handleSearch}
         />
         <TouchableOpacity onPress={handleLogout}>
-          <Text style={styles.logoutText}>Logout</Text>
+          <Text style={GlobalStyles.headerLogoutText}>Logout</Text>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
-  safeArea: {
-    backgroundColor: '#8A2BE2'
-  },
-  container: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 10,
-    height: 60,
-  },
-  avatarWrapper: {
-    width: 52, 
-    height: 52,
-    borderRadius: 26,
-    borderWidth: 1,
-    borderColor: 'white',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 8,
-  },
-  avatarFallback: {
-    backgroundColor: '#BCA1E8', 
-  },
-  username: {
-    color: 'white',
-    fontWeight: 'bold',
-    fontSize: 16,
-    flex: 1, 
-    textAlign: 'center',
-    marginHorizontal: 10,
-  },
-  logoutText: {
-    color: 'white',
-    fontWeight: '600',
-    fontSize: 16,
-    paddingLeft: 5,
-  }
-});//Closes Styles
-
 export default ZHeader;
 
-//Styles might change later

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, FlatList, TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
+import { View, FlatList, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { List, Avatar, Divider, Button, Text } from 'react-native-paper';
 import { firestore } from '../config/firebase';
+import { GlobalStyles } from '../Styles/Styles';
 
 const Search = ({ route, navigation }) => {
   const [loading, setLoading] = useState(true);
@@ -20,7 +21,7 @@ const Search = ({ route, navigation }) => {
         });
         setUsers(usersList);
       } catch (e) {
-        console.error("Error when looking for users: ", e);
+        console.error("Error searching for users: ", e);
       } finally {
         setLoading(false);
       }
@@ -33,13 +34,15 @@ const Search = ({ route, navigation }) => {
       <TouchableOpacity
         onPress={() => navigation.navigate('ViewProfile', { 
             profileId: item.id, 
-            currentUserId: currentUser.id 
+            currentUserId: currentUser.id,
+            currentUser: currentUser
         })}
       >
         <List.Item
           title={item.nameFull}
           description={'@' + item.nameUser}
-          titleStyle={{fontWeight: 'bold'}}
+          titleStyle={GlobalStyles.listItemTitle}
+          style={GlobalStyles.listItem}
           left={props =>
             item.avatarUrl ? (
               <Avatar.Image {...props} source={{ uri: item.avatarUrl }} size={48} />
@@ -48,11 +51,13 @@ const Search = ({ route, navigation }) => {
                 {...props}
                 label={`${item.nameFull?.[0] || 'U'}`.toUpperCase()}
                 size={48}
+                style={{ backgroundColor: '#7C4DFF' }}
+                color='#FFFFFF'
               />
             )
           }
         />
-        <Divider />
+        <Divider style={GlobalStyles.divider} />
       </TouchableOpacity>
     );
   };
@@ -62,29 +67,19 @@ const Search = ({ route, navigation }) => {
   }
 
   return (
-    <View style={styles.container}>
+    <View style={GlobalStyles.whiteContainer}>
       <FlatList
         data={users}
         renderItem={renderItem}
         keyExtractor={item => item.id}
         ListEmptyComponent={
-          <Text style={styles.emptyText}>
-            Could not find users.
+          <Text style={GlobalStyles.emptyTextGeneral}>
+            No users found.
           </Text>
         }
       />
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1
-  },
-  emptyText: {
-    textAlign: 'center', 
-    marginTop: 20
-  }
-});
 
 export default Search;

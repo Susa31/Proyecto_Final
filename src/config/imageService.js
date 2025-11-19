@@ -1,24 +1,37 @@
 import axios from 'axios';
-
 const CLOUD_NAME = 'dzxkcmkq3';
 const UPLOAD_PRESET = 'Zentro';
 
-export const uploadImageToCloudinary = async (imagePath) => {
-    const formData = new FormData();
+export const uploadMediaToCloudinary = async (mediaPath, mimeType) => {
     
+    let resourceType = 'auto';
+    let apiEndpoint = 'auto';
+
+    if (mimeType.startsWith('image/')) {
+        resourceType = 'image';
+        apiEndpoint = 'image';
+    } else if (mimeType.startsWith('video/')) {
+        resourceType = 'video';
+        apiEndpoint = 'video'; 
+    } else {
+        resourceType = 'raw';
+        apiEndpoint = 'raw';
+    }
+
+    const formData = new FormData();
     formData.append('file', {
-        uri: imagePath,
-        type: 'image/jpeg',
-        name: 'upload.jpg',
+        uri: mediaPath,
+        type: mimeType,
+        name: `upload.${mimeType.split('/')[1]}`,
     });
-
     formData.append('upload_preset', UPLOAD_PRESET);
+    formData.append('resource_type', resourceType);
 
-    console.log("Uploading to Cloudinary...");
+    console.log(`Uploading ${resourceType} to Cloudinary...`);
 
     try {
         const response = await axios.post(
-            `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`,
+            `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/${apiEndpoint}/upload`,
             formData,
             {
                 headers: {
@@ -28,17 +41,17 @@ export const uploadImageToCloudinary = async (imagePath) => {
         );
         
         const secureUrl = response.data.secure_url;
-        console.log("Image successfully uploaded to Cloudinary: ", secureUrl);
+        console.log("Successfully uploaded files to Cloudinary: ", secureUrl);
         return secureUrl;
 
     } catch (error) {
         if (error.response) {
-            console.error("Error when uploading the image (Cloudinary response): ", error.response.data);
+            console.error("Error when uploading (Cloudinary Answer): ", JSON.stringify(error.response.data));
         } else if (error.request) {
-            console.error("Error when uploading the image (No response): ", error.request);
+            console.error("Error when uploading (No answer): ", error.request);
         } else {
-            console.error("Error when uploading the image (General error): ", error.message);
+            console.error("Error when uploading (General Error): ", error.message);
         }
-        throw new Error("Error when uploading the image");
+        throw new Error("Error when uploading the file");
     }
 };

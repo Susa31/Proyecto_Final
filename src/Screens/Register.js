@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, Alert, TouchableOpacity, KeyboardAvoidingView, Platform, StyleSheet } from 'react-native';
+import { View, ScrollView, Alert, TouchableOpacity, KeyboardAvoidingView, Platform } from 'react-native';
 import { Card, TextInput, Text, Button, HelperText, Avatar, ActivityIndicator } from 'react-native-paper';
-import { registerService } from "../config/firebaseService";
-import { uploadImageToCloudinary } from "../config/imageService";
+import { registerService } from "../config/firebaseService"; 
+import { uploadMediaToCloudinary } from "../config/imageService"; 
 import { launchImageLibrary } from 'react-native-image-picker';
-
+import { GlobalStyles } from '../Styles/Styles';
 
 const Register = ({ navigation }) => {
     const [nameFull, setNameFull] = useState('');
@@ -18,6 +18,7 @@ const Register = ({ navigation }) => {
     const [isFormValid, setIsFormValid] = useState(false);
     
     const [imageUri, setImageUri] = useState(null); 
+    const [imageType, setImageType] = useState(null);
     const [isLoading, setIsLoading] = useState(false); 
 
     useEffect(() => {
@@ -37,10 +38,10 @@ const Register = ({ navigation }) => {
         }
         
         const areFieldsFilled = nameFull.trim() !== '' &&
-                                nameUser.trim() !== '' &&
-                                email.trim() !== '' &&
-                                password.trim() !== '' &&
-                                confirmPassword.trim() !== '';
+                                 nameUser.trim() !== '' &&
+                                 email.trim() !== '' &&
+                                 password.trim() !== '' &&
+                                 confirmPassword.trim() !== '';
         
         setIsFormValid(
             areFieldsFilled && 
@@ -65,8 +66,9 @@ const Register = ({ navigation }) => {
                 } else if (response.errorCode) {
                     console.log('ImagePicker Error: ', response.errorMessage);
                 } else {
-                    const uri = response.assets[0].uri;
-                    setImageUri(uri);
+                    const asset = response.assets[0];
+                    setImageUri(asset.uri);
+                    setImageType(asset.type);
                 }
             }
         );
@@ -88,9 +90,9 @@ const Register = ({ navigation }) => {
         };
 
         try {
-            if (imageUri) {
+            if (imageUri && imageType) {
                 console.log("Uploading avatar to Cloudinary...");
-                const avatarUrl = await uploadImageToCloudinary(imageUri);
+                const avatarUrl = await uploadMediaToCloudinary(imageUri, imageType); 
                 profileData.avatarUrl = avatarUrl;
             }
 
@@ -103,7 +105,7 @@ const Register = ({ navigation }) => {
             );
 
         } catch (error) {
-            console.error(" Error creating account: ", error.code, error.message);
+            console.error("Error creating account: ", error.code, error.message);
             if (error.code === 'auth/email-already-in-use') {
                 Alert.alert('Error', 'This email is already registered.');
                 setEmailError('This email is already in use.');
@@ -122,26 +124,27 @@ const Register = ({ navigation }) => {
     };
 
     return (
-        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={styles.container}>
-            <ScrollView contentContainerStyle={styles.scrollContainer}>
-                <View style={styles.headerContainer}>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={GlobalStyles.authContainer}>
+            <ScrollView contentContainerStyle={GlobalStyles.authScrollContainer}>
+                
+                <View style={GlobalStyles.authHeaderContainer}>
                     <TouchableOpacity onPress={handleSelectImage}>
                         {imageUri ? (
-                            <Avatar.Image size={100} source={{ uri: imageUri }} style={styles.avatar} />
+                            <Avatar.Image size={100} source={{ uri: imageUri }} style={GlobalStyles.authAvatar} />
                         ) : (
-                            <Avatar.Icon size={100} icon="camera-plus" style={styles.avatar} />
+                            <Avatar.Icon size={100} icon="camera-plus" style={GlobalStyles.authAvatar} />
                         )}
                     </TouchableOpacity>
-                    <Text style={styles.title}>Create a profile</Text>
+                    <Text style={GlobalStyles.authRegisterTitle}>Create a profile</Text>
                 </View>
                 
-                <Card>
+                <Card style={GlobalStyles.authCard}>
                     <Card.Content>
                         <TextInput 
                             label='* Full name' 
                             value={nameFull} 
                             onChangeText={setNameFull} 
-                            style={styles.input} 
+                            style={GlobalStyles.authInputRegister} 
                             left={<TextInput.Icon icon="account" />} 
                             mode='outlined' 
                         />
@@ -150,7 +153,7 @@ const Register = ({ navigation }) => {
                             label='* Username' 
                             value={nameUser} 
                             onChangeText={setNameUser} 
-                            style={styles.input} 
+                            style={GlobalStyles.authInputRegister} 
                             left={<TextInput.Icon icon="account-outline" />} 
                             mode='outlined' 
                             error={!!nameUserError} 
@@ -159,35 +162,35 @@ const Register = ({ navigation }) => {
                         <HelperText type="error" visible={!!nameUserError}>{nameUserError}</HelperText>
 
                         <TextInput
-                            label={'* Email'} value={email} onChangeText={setEmail} style={styles.input}
+                            label={'* Email'} value={email} onChangeText={setEmail} style={GlobalStyles.authInputRegister}
                             keyboardType='email-address' autoCapitalize='none'
                             left={<TextInput.Icon icon="email" />} mode='outlined' error={!!emailError}
                         />
                         <HelperText type="error" visible={!!emailError}>{emailError}</HelperText>
 
                         <TextInput
-                            label={'* Password'} value={password} onChangeText={setPassword} style={styles.input}
+                            label={'* Password'} value={password} onChangeText={setPassword} style={GlobalStyles.authInputRegister}
                             left={<TextInput.Icon icon="lock" />} mode='outlined'
                             secureTextEntry 
                             error={!!passwordError && password.length > 0} 
                         />
                         <TextInput
-                            label={'* Confirm Password'} value={confirmPassword} onChangeText={setConfirmPassword} style={styles.input}
+                            label={'* Confirm Password'} value={confirmPassword} onChangeText={setConfirmPassword} style={GlobalStyles.authInputRegister}
                             left={<TextInput.Icon icon="lock-check" />} mode='outlined'
                             secureTextEntry
                             error={!!passwordError && confirmPassword.length > 0} 
                         />
                         <HelperText type="error" visible={!!passwordError}>{passwordError}</HelperText>
                         
-                        <View style={styles.infoContainer}>
-                            <Text style={styles.infoText}>* Required fields</Text>
+                        <View style={GlobalStyles.authInfoContainer}>
+                            <Text style={GlobalStyles.authInfoText}>* Required fields</Text>
                         </View>
 
                         {isLoading ? (
                             <ActivityIndicator size="large" style={{ marginVertical: 10 }} />
                         ) : (
                             <Button
-                                mode='contained' onPress={handleSave} style={styles.button}
+                                mode='contained' onPress={handleSave} style={GlobalStyles.authButton}
                                 icon="account-plus" disabled={!isFormValid}
                             >
                                 Create Account
@@ -199,49 +202,6 @@ const Register = ({ navigation }) => {
             </ScrollView>
         </KeyboardAvoidingView>
     );
-};//Closes Register
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-    },
-    scrollContainer: {
-        flexGrow: 1,
-        justifyContent: 'center',
-        padding: 16,
-    },
-    headerContainer: {
-        alignItems: 'center',
-        marginBottom: 16,
-    },
-    avatar: {
-        marginBottom: 12,
-        backgroundColor: '#e0e0e0' 
-    },
-    profileImage: { //Not used anymore
-        width: 100,
-        height: 100,
-        borderRadius: 50,
-        marginBottom: 12,
-    },
-    title: {
-        fontSize: 24,
-        fontWeight: 'bold',
-    },
-    input: {
-        marginBottom: 4, 
-    },
-    infoContainer: {
-        marginTop: 8,
-        marginBottom: 16,
-    },
-    infoText: {
-        fontSize: 12,
-        color: '#666',
-    },
-    button: {
-        paddingVertical: 8,
-    },
-});//Closes styles
+};
 
 export default Register;

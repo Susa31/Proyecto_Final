@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, Alert, StyleSheet, Image, TouchableOpacity } from 'react-native'; 
-import { Card, TextInput, Button, Text } from 'react-native-paper';
+import { View, ScrollView, Alert, Image, TouchableOpacity } from 'react-native';
+import { Card, TextInput, Button, Text, ActivityIndicator } from 'react-native-paper';
 import { publishTweet } from '../config/firebaseService';
-import { uploadImageToCloudinary } from '../config/imageService'; 
-import { launchImageLibrary } from 'react-native-image-picker'; 
+import { uploadMediaToCloudinary } from '../config/imageService';
+import { launchImageLibrary } from 'react-native-image-picker';
+import { GlobalStyles } from '../Styles/Styles';
 
 const PublishPost = ({ navigation, route }) => {
     const [content, setContent] = useState('');
@@ -11,46 +12,61 @@ const PublishPost = ({ navigation, route }) => {
     const [charCount, setCharCount] = useState(0);
     const [isLoading, setIsLoading] = useState(false);
     
-    const [imageUri, setImageUri] = useState(null);
+    const [mediaUri, setMediaUri] = useState(null); 
+    const [mediaType, setMediaType] = useState(null); 
     
     const { user } = route.params; 
 
     useEffect(() => {
         const trimmed = content.trim();
         setCharCount(trimmed.length);
-        setIsValid((trimmed.length > 0 && trimmed.length <= 280) || (imageUri != null && trimmed.length <= 280));
-    }, [content, imageUri]);
+        setIsValid((trimmed.length > 0 && trimmed.length <= 280) || (mediaUri != null && trimmed.length <= 280));
+    }, [content, mediaUri]);
 
-    const handleSelectImage = () => {
+    const handleSelectMedia = (type) => { 
         launchImageLibrary(
-            { mediaType: 'photo', quality: 0.7 }, 
+            { 
+                mediaType: type, 
+                quality: type === 'video' ? 0.5 : 0.7,
+            }, 
             (response) => {
                 if (response.didCancel) {
-                    console.log('User has cancelled image selection');
+                    console.log('User cancelled');
                 } else if (response.errorCode) {
                     console.log('ImagePicker Error: ', response.errorMessage);
                 } else {
-                    const uri = response.assets[0].uri;
-                    setImageUri(uri); 
+                    const asset = response.assets[0];
+
+                    if (type === 'video' && asset.duration) {
+                        console.log(`Selected video duration: ${asset.duration} seconds`);
+                        if (asset.duration > 10) {
+                            Alert.alert(
+                                "Video Too Long",
+                                "Please select a video of 10 seconds or less."
+                            );
+                            return; 
+                        }
+                    }
+
+                    setMediaUri(asset.uri); 
+                    setMediaType(asset.type); 
                 }
             }
         );
     };
 
     const handlePublish = async () => {
-        if (!isValid || isLoading || !user) {
-            Alert.alert("Error", "Can not publish this Post");
-            return;
-        }
-        
+        if (!isValid || isLoading || !user) return;
         setIsLoading(true); 
         
         try {
-            let imageUrl = null;
+            let mediaUrl = null;
+            let postMediaType = null; 
             
-            if (imageUri) {
-                console.log("Uploading Post image to Cloudinary...");
-                imageUrl = await uploadImageToCloudinary(imageUri);
+            if (mediaUri && mediaType) {
+                console.log(`Uploading ${mediaType} to Cloudinary...`);
+                mediaUrl = await uploadMediaToCloudinary(mediaUri, mediaType);
+                postMediaType = mediaType.startsWith('image') ? 'image' : 'video';
             }
 
             const newPostData = {
@@ -58,7 +74,8 @@ const PublishPost = ({ navigation, route }) => {
                 authorId: user.id,
                 fullname: user.nameFull, 
                 username: user.nameUser,
-                imageUrl: imageUrl,
+                mediaUrl: mediaUrl, 
+                mediaType: postMediaType, 
             };
 
             const publishedPost = await publishTweet(newPostData);
@@ -67,30 +84,36 @@ const PublishPost = ({ navigation, route }) => {
                 route.params.onPublish({ 
                     ...publishedPost, 
                     text: publishedPost.text, 
-                    imageUrl: publishedPost.imageUrl, 
+                    imageUrl: publishedPost.mediaType === 'image' ? publishedPost.mediaUrl : null,
+                    videoUrl: publishedPost.mediaType === 'video' ? publishedPost.mediaUrl : null,
                     createdAt: new Date().toLocaleString() 
                 });
             }
             
             Alert.alert(
                 'Published',
-                'Your Post has been shared with others!',
-                [{ text: 'OK', onPress: () => navigation.replace('Feed', { user: user }) }]
+                'Your post has been shared!',
+                [{ text: 'OK', onPress: () => navigation.goBack() }]
             );
         
         } catch (error) {
-            console.error("Error when publishing: ", error);
-            Alert.alert("Error", "Could not Publish your Post. Try again later");
+            console.error("Error publishing: ", error);
+            Alert.alert("Error", "Could not publish your post. Please try again.");
             setIsLoading(false); 
         }
     };
 
+    const clearMedia = () => {
+        setMediaUri(null);
+        setMediaType(null);
+    }
+
     return (
-    <ScrollView style={styles.container}>
-        <View style={styles.innerContainer}>
-        <Card style={styles.card}>
+    <ScrollView style={GlobalStyles.publishContainer}>
+        <View style={GlobalStyles.publishInnerContainer}>
+        <Card style={GlobalStyles.publishCard}>
             <Card.Content>
-            <Text style={styles.title}>
+            <Text style={GlobalStyles.publishTitle}>
                 Post something here!
             </Text>
 
@@ -104,31 +127,50 @@ const PublishPost = ({ navigation, route }) => {
                 style={{ marginBottom: 10 }}
             />
             
-            {imageUri && (
-                <View style={styles.imagePreviewContainer}>
-                    <Image source={{ uri: imageUri }} style={styles.imagePreview} />
-                    <TouchableOpacity 
-                        style={styles.removeImageButton} 
-                        onPress={() => setImageUri(null)}
-                    >
-                        <Text style={styles.removeImageText}>X</Text>
+            {mediaUri && mediaType?.startsWith('image') && (
+                <View style={GlobalStyles.mediaPreviewContainer}>
+                    <Image source={{ uri: mediaUri }} style={GlobalStyles.mediaPreviewImage} />
+                    <TouchableOpacity style={GlobalStyles.mediaRemoveButton} onPress={clearMedia}>
+                        <Text style={GlobalStyles.mediaRemoveText}>X</Text>
                     </TouchableOpacity>
                 </View>
             )}
 
-            <Text style={styles.charCount}>{charCount}/280</Text> 
+            {mediaUri && mediaType?.startsWith('video') && (
+                 <View style={GlobalStyles.mediaPreviewContainer}>
+                    <Text style={GlobalStyles.mediaPreviewVideoPlaceholder}>Video attached: {mediaUri.split('/').pop()}</Text>
+                    <TouchableOpacity style={GlobalStyles.mediaRemoveButton} onPress={clearMedia}>
+                        <Text style={GlobalStyles.mediaRemoveText}>X</Text>
+                    </TouchableOpacity>
+                </View>
+            )}
+            
+            <Text style={GlobalStyles.charCount}>{charCount}/280</Text> 
 
-            <Button
-                mode="outlined"
-                icon="camera"
-                buttonColor="#8A2BE2"
-                textColor='white'
-                onPress={handleSelectImage}
-                style={{ marginBottom: 10 }}
-                disabled={isLoading}
-            >
-                {imageUri ? "Change photo" : "Attach photo"}
-            </Button>
+            <View style={GlobalStyles.mediaButtonRow}>
+                <Button
+                    mode="outlined"
+                    textColor="#8A2BE2"
+                    theme={{ colors: { outline: "#8A2BE2" } }}
+                    icon="camera"
+                    onPress={() => handleSelectMedia('photo')}
+                    style={GlobalStyles.mediaButton}
+                    disabled={isLoading}
+                >
+                    Photo
+                </Button>
+                <Button
+                    mode="outlined"
+                    textColor="#8A2BE2"
+                    theme={{ colors: { outline: "#8A2BE2" } }}
+                    icon="video"
+                    onPress={() => handleSelectMedia('video')}
+                    style={GlobalStyles.mediaButton}
+                    disabled={isLoading}
+                >
+                    Video
+                </Button>
+            </View>
 
             <Button
                 mode="contained"
@@ -137,6 +179,7 @@ const PublishPost = ({ navigation, route }) => {
                 icon="send" 
                 disabled={!isValid || isLoading}
                 loading={isLoading} 
+                style={{marginTop: 10}} 
             >
                 Publish
             </Button>
@@ -145,61 +188,6 @@ const PublishPost = ({ navigation, route }) => {
       </View>
     </ScrollView>
     );
-};//Closes PublishPost
-
-const styles = StyleSheet.create({
-    container: {
-        flex: 1,
-        backgroundColor: '#f0f2f5'
-    },
-    innerContainer: {
-        flex: 1,
-        justifyContent: 'center',
-        padding: 20,
-        paddingTop: 50
-    },
-    card: {
-        borderRadius: 12,
-        elevation: 2,
-    },
-    title: {
-        fontSize: 18,
-        textAlign: 'center',
-        marginBottom: 15,
-        fontWeight: 'bold'
-    },
-    charCount: {
-        textAlign: 'right',
-        color: 'gray',
-        marginBottom: 10
-    },
-    imagePreviewContainer: {
-        position: 'relative', 
-        marginVertical: 10,
-    },
-    imagePreview: {
-        width: '100%',
-        height: 200, 
-        borderRadius: 8,
-        resizeMode: 'cover',
-    },
-    removeImageButton: {
-        position: 'absolute',
-        top: 5,
-        right: 5,
-        backgroundColor: 'rgba(0,0,0,0.6)',
-        borderRadius: 15,
-        width: 30,
-        height: 30,
-        justifyContent: 'center',
-        alignItems: 'center',
-    },
-    removeImageText: {
-        color: 'white',
-        fontWeight: 'bold',
-        fontSize: 16,
-    }
-});//Closes styles
+};
 
 export default PublishPost;
-
